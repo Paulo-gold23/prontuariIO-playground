@@ -1,272 +1,409 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR" class="h-full bg-slate-50 antialiased">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Médico — formular.IO</title>
-    <!-- Reutilizando estilos -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- Supabase SDK e Auth Guard -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="auth-guard.js"></script>
-    <script src="dark-mode.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { primary: { 500: '#10b981', 600: '#059669' } } // Emerald theme for Medico
-                }
-            }
-        }
-    </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Médico — formular.IO</title>
+  <!-- Reutilizando estilos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Supabase SDK e Auth Guard -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth-guard.js"></script>
+  <script src="dark-mode.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "sans-serif"] },
+          colors: { primary: { 500: "#10b981", 600: "#059669" } }, // Emerald theme for Medico
+        },
+      },
+    };
+  </script>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-600 overflow-x-hidden">
-
-    <!-- Navbar -->
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <div class="p-1.5 bg-emerald-600 text-white rounded-lg">
-                        <i class="ph-bold ph-stethoscope text-xl"></i>
-                    </div>
-                    <span class="font-bold text-xl text-slate-800">Consultório Digital</span>
-                </div>
-                <div class="flex items-center gap-2 sm:gap-4">
-                    <a href="recepcao.html"
-                        class="text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                        <i class="ph-bold ph-user-list text-base sm:text-lg"></i> <span>Recepção</span>
-                    </a>
-                    <span class="hidden sm:inline text-sm font-medium text-slate-500"
-                        id="navbar-doctor-name">Carregando...</span>
-                    <!-- Removido o login.html do href para usarmos func signOut -->
-                    <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
-                        title="Modo Noturno">
-                        <i class="ph-bold ph-moon text-xl"></i>
-                    </button>
-                    <button onclick="logoutMedico()"
-                        class="text-sm text-rose-500 hover:text-rose-700 font-medium">Sair</button>
-                </div>
-            </div>
+  <!-- Navbar -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="p-1.5 bg-emerald-600 text-white rounded-lg">
+            <i class="ph-bold ph-stethoscope text-xl"></i>
+          </div>
+          <span class="font-bold text-xl text-slate-800">Consultório Digital</span>
         </div>
-    </nav>
-
-    <script>
-        // Lógica de proteção de rota e identificação rápida
-        const medicoAtivo = JSON.parse(localStorage.getItem('medico_ativo'));
-
-        if (!medicoAtivo) {
-            // Se não tiver médico no localStorage, expulsa pra tela de login
-            window.location.href = 'login.html';
-        } else {
-            // Atualiza o cabecalho
-            document.addEventListener('DOMContentLoaded', () => {
-                document.getElementById('navbar-doctor-name').innerText = medicoAtivo.nome;
-            });
-        }
-
-        async function logoutMedico() {
-            await supabaseClient.auth.signOut();
-            localStorage.removeItem('secretaria_ativa');
-            localStorage.removeItem('medico_ativo');
-            window.location.href = 'login.html';
-        }
-    </script>
-
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        <div class="mb-8 flex justify-between items-end">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Pacientes Aguardando</h1>
-                <p class="text-slate-500">Selecione um paciente para iniciar o atendimento</p>
-            </div>
-            <button onclick="carregarPacientes()"
-                class="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 bg-emerald-50 px-3 py-2 rounded-lg transition-colors">
-                <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
-            </button>
+        <div class="flex items-center gap-2 sm:gap-4">
+          <a href="recepcao.html"
+            class="text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+            <i class="ph-bold ph-user-list text-base sm:text-lg"></i>
+            <span>Recepção</span>
+          </a>
+          <span class="hidden sm:inline text-sm font-medium text-slate-500" id="navbar-doctor-name">Carregando...</span>
+          <!-- Removido o login.html do href para usarmos func signOut -->
+          <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            title="Modo Noturno">
+            <i class="ph-bold ph-moon text-xl"></i>
+          </button>
+          <button onclick="logoutMedico()" class="text-sm text-rose-500 hover:text-rose-700 font-medium">
+            Sair
+          </button>
         </div>
+      </div>
+    </div>
+  </nav>
 
-        <!-- Lista de Pacientes (Dinâmica) -->
-        <div class="grid grid-cols-1 gap-4" id="listaPacientes">
-            <!-- Loading State Inicial -->
-            <div class="p-12 text-center text-slate-400">
-                <i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i>
-                <p>Carregando fila de espera...</p>
-            </div>
+  <script>
+    // Lógica de proteção de rota e identificação rápida
+    const medicoAtivo = JSON.parse(localStorage.getItem("medico_ativo"));
+
+    if (!medicoAtivo) {
+      // Se não tiver médico no localStorage, expulsa pra tela de login
+      window.location.href = "login.html";
+    } else {
+      // Atualiza o cabecalho
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("navbar-doctor-name").innerText =
+          medicoAtivo.nome;
+      });
+    }
+
+    async function logoutMedico() {
+      await supabaseClient.auth.signOut();
+      localStorage.removeItem("secretaria_ativa");
+      localStorage.removeItem("medico_ativo");
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Lista de Pacientes</h1>
+        <p class="text-slate-500">
+          Selecione um paciente para iniciar o atendimento
+        </p>
+      </div>
+      <button onclick="carregarPacientes()"
+        class="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 bg-emerald-50 px-3 py-2 rounded-lg transition-colors">
+        <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+      </button>
+    </div>
+
+    <!-- Lista de Pacientes (Dinâmica) -->
+    <div class="grid grid-cols-1 gap-4" id="listaPacientes">
+      <!-- Loading State Inicial -->
+      <div class="p-12 text-center text-slate-400">
+        <i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i>
+        <p>Carregando fila de espera...</p>
+      </div>
+    </div>
+
+    <!-- Histórico Recente (todos os prontuários finalizados) -->
+    <div class="mt-10 pt-8 border-t border-slate-200">
+      <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <i class="ph-bold ph-clock-counter-clockwise text-slate-400"></i>
+        Prontuários Recentes
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="listaHistorico">
+        <div
+          class="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 col-span-full">
+          <i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i>
+          <p class="text-sm">Carregando histórico...</p>
         </div>
+      </div>
+    </div>
 
-        <div class="mt-12 pt-8 border-t border-slate-200">
-            <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <i class="ph-bold ph-clock-counter-clockwise text-slate-400"></i>
-                Histórico Recente
-            </h2>
+  </main>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="listaHistorico">
-                <!-- Preenchido via JS (Mock para MVP) -->
-                <div
-                    class="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 col-span-full">
-                    <p class="text-sm">Nenhum atendimento finalizado hoje.</p>
-                </div>
-            </div>
-        </div>
+  <script>
+    const WEBHOOK_LISTAR =
+      "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
+    const WEBHOOK_HISTORICO =
+      "https://n8n.srv1181762.hstgr.cloud/webhook/consultas_finalizadas";
 
-    </main>
+    async function carregarPacientes() {
+      const container = document.getElementById("listaPacientes");
+      const historicoContainer = document.getElementById("listaHistorico");
 
-    <script>
-        const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
-        const WEBHOOK_HISTORICO = "https://n8n.srv1181762.hstgr.cloud/webhook/consultas_finalizadas";
-
-        async function carregarPacientes() {
-            const container = document.getElementById('listaPacientes');
-            const historicoContainer = document.getElementById('listaHistorico');
-
-            // Só mostra loading se estiver vazio
-            if ((!container.children.length || container.querySelector('.ph-spinner')) && container.innerHTML.indexOf('ph-spinner') === -1) {
-                container.innerHTML = `
+      // Só mostra loading se estiver vazio
+      if (
+        (!container.children.length ||
+          container.querySelector(".ph-spinner")) &&
+        container.innerHTML.indexOf("ph-spinner") === -1
+      ) {
+        container.innerHTML = `
                     <div class="p-12 text-center text-slate-400 animate-pulse">
                         <i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i>
                         <p>Atualizando lista de espera...</p>
                     </div>
                 `;
-            }
+      }
 
-            try {
-                const paramMedico = medicoAtivo && medicoAtivo.id ? `&medico_id=${medicoAtivo.id}` : '';
+      try {
+        const paramMedico =
+          medicoAtivo && medicoAtivo.id ? `&medico_id=${medicoAtivo.id}` : "";
 
-                // 1. CARREGAR FILA DE ESPERA
-                const urlFila = `${WEBHOOK_LISTAR}?t=${new Date().getTime()}${paramMedico}`;
-                const resFila = await fetch(urlFila);
-                if (!resFila.ok) throw new Error('Erro ao buscar pacientes');
+        // 1. CARREGAR FILA DE ESPERA
+        const urlFila = `${WEBHOOK_LISTAR}?t=${new Date().getTime()}${paramMedico}`;
+        const resFila = await fetch(urlFila);
+        if (!resFila.ok) throw new Error("Erro ao buscar pacientes");
 
-                let data = await resFila.json();
-                if (data.all_pacientes) data = data.all_pacientes;
-                if (!Array.isArray(data)) data = data ? [data] : [];
+        let data = await resFila.json();
+        if (data.all_pacientes) data = data.all_pacientes;
+        if (!Array.isArray(data)) data = data ? [data] : [];
 
-                // Filter: Only show patients NOT finished (idempotent check)
-                const fila = data
-                    .filter(p => p && p.nome && p.status_atendimento !== 'finalizado')
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // Filter: Show all valid patients
+        const fila = data
+          .filter((p) => p && p.nome)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-                container.innerHTML = '';
-                if (fila.length === 0) {
-                    container.innerHTML = `
+        container.innerHTML = "";
+        if (fila.length === 0) {
+          container.innerHTML = `
                         <div class="p-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
                             <i class="ph ph-coffee text-4xl mb-3 text-slate-300"></i>
                             <p class="font-medium">Nenhum paciente aguardando.</p>
                             <p class="text-xs mt-1">Aguardando novos cadastros na recepção.</p>
                         </div>
                     `;
-                } else {
-                    fila.forEach(p => {
-                        const dataCriacao = p.created_at ? new Date(p.created_at) : new Date();
-                        const horaChegada = dataCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        } else {
+          fila.forEach((p) => {
+            const dataCriacao = p.created_at
+              ? new Date(p.created_at)
+              : new Date();
+            const horaChegada = dataCriacao.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
 
-                        const card = document.createElement('a');
-                        card.href = `atendimento.html?paciente=${encodeURIComponent(p.nome)}&id=${p.id}`;
-                        card.className = 'block group relative bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer animate-fade-in-down';
-                        card.innerHTML = `
-                            <div class="flex items-center justify-between">
+            const card = document.createElement("div");
+            card.className =
+              "bg-white p-6 rounded-2xl shadow-sm border border-slate-200 transition-all animate-fade-in-down";
+
+            let statusHtml =
+              p.status_atendimento === "aguardando"
+                ? `<span class="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-extrabold rounded-full border border-amber-100 uppercase tracking-widest">Aguardando</span>`
+                : `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold rounded-full border border-emerald-100 uppercase tracking-widest">Cadastrado</span>`;
+
+            card.innerHTML = `
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg shadow-sm">
                                         ${p.nome.substring(0, 2).toUpperCase()}
                                     </div>
                                     <div>
-                                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">${p.nome}</h3>
+                                        <h3 class="text-lg font-bold text-slate-900">${p.nome}</h3>
                                         <div class="flex gap-3 text-sm text-slate-500 mt-1">
                                             <span class="flex items-center gap-1 font-medium"><i class="ph-fill ph-clock text-emerald-400"></i> ${horaChegada}</span>
-                                            <span class="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-[10px] font-bold uppercase tracking-tight">${p.convenio || 'Particular'}</span>
+                                            <span class="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-[10px] font-bold uppercase tracking-tight">${p.convenio || "Particular"}</span>
+                                            ${statusHtml}
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-extrabold rounded-full border border-amber-100 uppercase tracking-widest group-hover:bg-amber-100 transition-colors">Aguardando</span>
-                                    <div class="h-10 w-10 border border-slate-100 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                                        <i class="ph-bold ph-caret-right text-xl"></i>
-                                    </div>
+                                <div class="flex items-center gap-2 w-full sm:w-auto">
+                                    <button onclick="verHistorico('${p.id}', '${p.nome.replace(/'/g, "\\'")}')" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                                        <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
+                                    </button>
+                                    <a href="atendimento.html?paciente=${encodeURIComponent(p.nome)}&id=${p.id}" class="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                                        <i class="ph-bold ph-plus-circle"></i> Novo Atendimento
+                                    </a>
                                 </div>
                             </div>`;
-                        container.appendChild(card);
-                    });
-                }
-
-                // 2. CARREGAR HISTÓRICO
-                try {
-                    const urlHist = `${WEBHOOK_HISTORICO}?t=${new Date().getTime()}${paramMedico}`;
-                    const resHist = await fetch(urlHist);
-                    if (resHist.ok) {
-                        let histData = await resHist.json();
-                        if (histData.all_consultas) histData = histData.all_consultas;
-                        if (!Array.isArray(histData)) histData = histData ? [histData] : [];
-
-                        if (historicoContainer) {
-                            if (histData.length === 0) {
-                                historicoContainer.innerHTML = `<div class="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 col-span-full"><p class="text-sm">Nenhum atendimento finalizado hoje.</p></div>`;
-                            } else {
-                                // Usamos um fragmento para não apagar a tela enquanto o "await" busca as URLs
-                                const fragment = document.createDocumentFragment();
-
-                                for (const c of histData) {
-                                    const dataC = new Date(c.data_hora);
-                                    const dataFmt = dataC.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                                    const horaFmt = dataC.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                                    // Gerar URLs assinadas em vez de usar as públicas
-                                    const pdfSignedUrl = await getSignedUrl('prontuarios_pdf', c.consulta_id + '.pdf');
-
-                                    let audioTag = '';
-                                    if (c.audio_url) {
-                                        const audioSignedUrl = await getSignedUrl('audios_consultas', c.audio_url);
-                                        if (audioSignedUrl) {
-                                            audioTag = `<a href="${audioSignedUrl}" target="_blank" class="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Ouvir Áudio"><i class="ph-bold ph-speaker-high"></i></a>`;
-                                        }
-                                    }
-
-                                    const histCard = document.createElement('div');
-                                    histCard.className = 'bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all animate-fade-in-up group';
-                                    histCard.innerHTML = `
-                                        <div class="flex justify-between items-start mb-3">
-                                            <div class="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
-                                                <i class="ph-fill ph-file-pdf text-xl"></i>
-                                            </div>
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase">${dataFmt} • ${horaFmt}</span>
-                                        </div>
-                                        <h4 class="font-bold text-slate-800 text-sm mb-4 line-clamp-1">${c.paciente_nome}</h4>
-                                        <div class="flex gap-2">
-                                            <a href="${pdfSignedUrl || '#'}" target="_blank" 
-                                               onclick="${!pdfSignedUrl ? 'event.preventDefault(); alert(\'PDF não encontrado ou expirado.\');' : ''}"
-                                               class="flex-1 text-center py-2 bg-emerald-50 text-emerald-700 text-xs font-black rounded-lg hover:bg-emerald-100 transition-colors"> VER PDF </a>
-                                            ${audioTag}
-                                        </div>
-                                    `;
-                                    fragment.appendChild(histCard);
-                                }
-
-                                // Substitui todo o conteúdo de uma vez só para evitar "piscadas"
-                                historicoContainer.innerHTML = '';
-                                historicoContainer.appendChild(fragment);
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("Erro histórico:", e);
-                }
-
-            } catch (error) {
-                console.error(error);
-                container.innerHTML = `<div class="p-8 text-center text-rose-500 bg-rose-50 rounded-xl border border-rose-200"><i class="ph-bold ph-warning-circle text-3xl mb-2"></i><p>Erro ao carregar lista.</p></div>`;
-            }
+            container.appendChild(card);
+          });
         }
 
-        // Iniciar
-        document.addEventListener('DOMContentLoaded', carregarPacientes);
-        // Auto-refresh a cada 60s
-        setInterval(carregarPacientes, 60000);
-    </script>
+        // 2. CARREGAR PRONTUÁRIOS RECENTES (todos, globais)
+        try {
+          const historicoContainer = document.getElementById('listaHistorico');
+          const urlHist = `${WEBHOOK_HISTORICO}?t=${new Date().getTime()}${paramMedico}`;
+          const resHist = await fetch(urlHist);
+          if (resHist.ok) {
+            let histData = await resHist.json();
+            if (histData.all_consultas) histData = histData.all_consultas;
+            if (!Array.isArray(histData)) histData = histData ? [histData] : [];
+
+            if (historicoContainer) {
+              if (histData.length === 0) {
+                historicoContainer.innerHTML = `<div class="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 col-span-full"><p class="text-sm">Nenhum prontuário finalizado ainda.</p></div>`;
+              } else {
+                const fragment = document.createDocumentFragment();
+                for (const c of histData) {
+                  const dataC = new Date(c.data_hora);
+                  const dataFmt = dataC.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+                  const horaFmt = dataC.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  const pdfSignedUrl = await getSignedUrl("prontuarios_pdf", c.consulta_id + ".pdf");
+                  let audioTag = "";
+                  if (c.audio_url) {
+                    const audioSignedUrl = await getSignedUrl("audios_consultas", c.audio_url);
+                    if (audioSignedUrl) {
+                      audioTag = `<a href="${audioSignedUrl}" target="_blank" class="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title="Ouvir Áudio"><i class="ph-bold ph-speaker-high"></i></a>`;
+                    }
+                  }
+                  const histCard = document.createElement("div");
+                  histCard.className = "bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all animate-fade-in-up group";
+                  histCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                      <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                        <i class="ph-fill ph-file-pdf text-xl"></i>
+                      </div>
+                      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${dataFmt} • ${horaFmt}</span>
+                    </div>
+                    <div class="mb-4">
+                      <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">Paciente</p>
+                      <h4 class="font-bold text-slate-800 text-sm line-clamp-1">${c.paciente_nome}</h4>
+                    </div>
+                    <div class="flex gap-2">
+                      <a href="${pdfSignedUrl || "#"}" target="_blank"
+                         onclick="${!pdfSignedUrl ? "event.preventDefault(); alert('PDF não encontrado ou expirado.');" : ""}"
+                         class="flex-1 text-center py-2 bg-slate-900 text-white text-xs font-black rounded-lg hover:bg-slate-800 transition-colors uppercase tracking-widest"> Abrir Laudo </a>
+                      ${audioTag}
+                    </div>`;
+                  fragment.appendChild(histCard);
+                }
+                historicoContainer.innerHTML = "";
+                historicoContainer.appendChild(fragment);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Erro histórico recente:", e);
+        }
+
+      } catch (error) {
+        console.error(error);
+        container.innerHTML = `<div class="p-8 text-center text-rose-500 bg-rose-50 rounded-xl border border-rose-200"><i class="ph-bold ph-warning-circle text-3xl mb-2"></i><p>Erro ao carregar lista.</p></div>`;
+      }
+    }
+
+    // Iniciar
+    document.addEventListener("DOMContentLoaded", carregarPacientes);
+    // Auto-refresh a cada 60s
+    setInterval(carregarPacientes, 60000);
+
+    async function verHistorico(pacienteId, nome) {
+      const modal = document.getElementById("modalHistorico");
+      document.getElementById("modal-hist-nome").innerHTML =
+        `<i class="ph-bold ph-folder-open text-emerald-500"></i> Histórico: ${nome}`;
+      const container = document.getElementById("historicoConteudo");
+      container.innerHTML = `<div class="p-8 text-center text-slate-400"><i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i><p>Carregando histórico...</p></div>`;
+
+      modal.classList.remove("hidden");
+
+      try {
+        const urlHist = `${WEBHOOK_HISTORICO}?paciente_id=${pacienteId}&t=${new Date().getTime()}`;
+        const res = await fetch(urlHist);
+        if (!res.ok) throw new Error("Erro ao buscar histórico");
+
+        let data = await res.json();
+        if (data.all_consultas) data = data.all_consultas;
+        if (!Array.isArray(data)) data = data ? [data] : [];
+
+        container.innerHTML = "";
+        if (data.length === 0) {
+          container.innerHTML = `<div class="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200"><p class="text-sm">Nenhum prontuário anterior encontrado.</p></div>`;
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (const c of data) {
+          const dataC = new Date(c.data_hora);
+          const dataFmt = dataC.toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+          const horaFmt = dataC.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const pdfSignedUrl = await getSignedUrl(
+            "prontuarios_pdf",
+            c.consulta_id + ".pdf",
+          );
+
+          let audioTag = "";
+          if (c.audio_url) {
+            const audioSignedUrl = await getSignedUrl(
+              "audios_consultas",
+              c.audio_url,
+            );
+            if (audioSignedUrl) {
+              audioTag = `<a href="${audioSignedUrl}" target="_blank" class="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-colors" title="Ouvir Áudio"><i class="ph-bold ph-speaker-high text-lg"></i></a>`;
+            }
+          }
+
+          const div = document.createElement("div");
+          div.className =
+            "bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-4 hover:border-emerald-300 transition-colors";
+          div.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                                <i class="ph-bold ph-calendar text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-black text-emerald-500 uppercase tracking-widest mb-0.5">${dataFmt}</p>
+                                <p class="text-xs text-slate-500 font-medium"><i class="ph-bold ph-clock"></i> ${horaFmt}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="${pdfSignedUrl || "#"}" target="_blank" onclick="${!pdfSignedUrl ? "event.preventDefault(); alert('PDF expirado ou em geração.');" : ""}" class="px-5 py-2.5 bg-slate-900 text-white text-xs font-black rounded-xl hover:bg-slate-800 transition-colors flex items-center gap-2 uppercase tracking-widest shadow-sm">
+                                <i class="ph-bold ph-file-pdf text-lg"></i> Ver PDF
+                            </a>
+                            ${audioTag}
+                        </div>
+                    `;
+          fragment.appendChild(div);
+        }
+        container.appendChild(fragment);
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="p-8 text-center text-rose-500"><i class="ph-bold ph-warning-circle text-3xl mb-2"></i><p>Erro ao carregar histórico.</p></div>`;
+      }
+    }
+
+    function fecharModalHistorico() {
+      document.getElementById("modalHistorico").classList.add("hidden");
+    }
+  </script>
+
+  <!-- Modal Histórico -->
+  <div id="modalHistorico" class="hidden fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title"
+    role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity backdrop-blur-sm" aria-hidden="true"
+        onclick="fecharModalHistorico()"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full animate-fade-in-down border border-slate-100">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
+            <div>
+              <h3 class="text-xl leading-6 font-bold text-slate-900 flex items-center gap-2" id="modal-hist-nome">
+                <i class="ph-bold ph-folder-open text-emerald-500"></i>
+                Histórico do Paciente
+              </h3>
+            </div>
+            <button onclick="fecharModalHistorico()"
+              class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-50 hover:bg-slate-100 p-2 rounded-lg">
+              <i class="ph-bold ph-x text-lg"></i>
+            </button>
+          </div>
+          <div id="historicoConteudo" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div class="p-8 text-center text-slate-400">
+              <i class="ph ph-spinner animate-spin text-3xl mb-2 text-emerald-500"></i>
+              <p>Carregando histórico...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

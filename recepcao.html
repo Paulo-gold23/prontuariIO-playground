@@ -280,8 +280,8 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="px-6 py-5 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="ph-bold ph-hourglass-medium text-amber-500"></i>
-                            Fila de Atendimento (Hoje)
+                            <i class="ph-bold ph-users text-indigo-500"></i>
+                            Base de Pacientes / Fila
                         </h2>
                         <button onclick="carregarFila()"
                             class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
@@ -315,43 +315,110 @@
     </main>
 
     <!-- Modal Detalhes Paciente -->
-    <div id="modalDetalhes" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
-        role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
-                onclick="fecharModal()"></div>
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div
-                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full animate-fade-in-down">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div
-                            class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-                            <i class="ph-bold ph-user text-indigo-600 text-xl"></i>
-                        </div>
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-nome">Nome do Paciente
-                            </h3>
-                            <div class="mt-2 text-sm text-gray-500 space-y-2">
-                                <p><span class="font-semibold">Convênio:</span> <span id="modal-convenio">-</span></p>
-                                <p><span class="font-semibold">Chegada:</span> <span id="modal-chegada">-</span></p>
-                                <p><span class="font-semibold">ID:</span> <span id="modal-id"
-                                        class="font-mono text-xs bg-gray-100 px-1 rounded">-</span></p>
-                            </div>
-                        </div>
+    <div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
+        aria-modal="true" aria-labelledby="modal-nome">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="fecharModal()"></div>
+
+        <!-- Card do Modal -->
+        <div class="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-down"
+            style="background: linear-gradient(135deg, #1e2235 0%, #161927 100%);">
+
+            <!-- Header com avatar e nome -->
+            <div class="px-6 pt-7 pb-5">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+                        <i class="ph-bold ph-user text-indigo-400 text-2xl"></i>
                     </div>
-                </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse justify-between items-center">
-                    <button type="button" onclick="fecharModal()"
-                        class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-                        Fechar
-                    </button>
-                    <button type="button" onclick="excluirPaciente()"
-                        class="w-full inline-flex justify-center items-center gap-2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-rose-600 text-base font-medium text-white hover:bg-rose-700 focus:outline-none sm:w-auto sm:text-sm">
-                        <i class="ph-bold ph-trash"></i> Excluir Paciente
+                    <div>
+                        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Detalhes do
+                            Paciente</p>
+                        <h3 class="text-lg font-bold text-white leading-tight" id="modal-nome">Nome do Paciente</h3>
+                    </div>
+                    <button onclick="fecharModal()"
+                        class="ml-auto p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                        <i class="ph-bold ph-x text-lg"></i>
                     </button>
                 </div>
             </div>
+
+            <!-- Divisor -->
+            <div class="h-px bg-white/5 mx-6"></div>
+
+            <!-- Info -->
+            <div class="px-6 py-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Convênio</span>
+                    <span class="text-sm font-semibold text-slate-200" id="modal-convenio">-</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Chegada</span>
+                    <span class="text-sm font-semibold text-slate-200" id="modal-chegada">-</span>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                    <span
+                        class="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0 mt-0.5">ID</span>
+                    <span class="text-xs font-mono text-slate-400 bg-white/5 px-2 py-1 rounded-lg break-all text-right"
+                        id="modal-id">-</span>
+                </div>
+            </div>
+
+            <!-- Divisor -->
+            <div class="h-px bg-white/5 mx-6"></div>
+
+            <!-- Ações -->
+            <div class="px-6 py-5 flex gap-3">
+                <button type="button" onclick="excluirPaciente()"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-rose-500/15 text-rose-400 border border-rose-500/25 hover:bg-rose-500/25 hover:text-rose-300 rounded-xl text-sm font-bold transition-all flex-1 justify-center">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+                <button type="button" onclick="fecharModal()"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all flex-1 justify-center shadow-lg shadow-indigo-500/25">
+                    <i class="ph-bold ph-check"></i> Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado -->
+    <div id="modalConfirm" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
+            style="background: #1e2235;">
+            <div class="p-8 text-center">
+                <div
+                    class="w-16 h-16 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5 border border-amber-500/20">
+                    <i class="ph-bold ph-warning text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3" id="confirm-title">Atenção</h3>
+                <p class="text-slate-400 text-sm leading-relaxed" id="confirm-msg">Tem certeza que deseja realizar esta
+                    ação?</p>
+            </div>
+            <div class="flex border-t border-white/5">
+                <button id="confirm-cancel"
+                    class="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-white/5 transition-colors border-r border-white/5 uppercase tracking-widest">Cancelar</button>
+                <button id="confirm-ok"
+                    class="flex-1 py-4 text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-colors uppercase tracking-widest">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta Customizado -->
+    <div id="modalAlert" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
+            style="background: #1e2235;">
+            <div class="p-8 text-center">
+                <div
+                    class="w-16 h-16 bg-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/20">
+                    <i class="ph-bold ph-info text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3" id="alert-title">Aviso</h3>
+                <p class="text-slate-400 text-sm leading-relaxed" id="alert-msg">Mensagem decuidado.</p>
+            </div>
+            <button id="alert-ok"
+                class="w-full py-5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors uppercase tracking-widest rounded-b-3xl">Entendido</button>
         </div>
     </div>
 
@@ -405,14 +472,14 @@
                 const v = e.target.value;
                 if (v.length > 0 && v.length < 10) {
                     // Limpa se deixou a data na metade cortada
-                    alert("A data deve estar no formato DD/MM/AAAA");
+                    showCustomAlert("A data deve estar no formato DD/MM/AAAA", "Data Incompleta");
                     e.target.value = "";
                 } else if (v.length === 10) {
                     const [d, m, y] = v.split('/').map(Number);
                     const date = new Date(y, m - 1, d);
                     // Verificação extra para fevereiro bissexto ou dias impossiveis (ex 31/02)
                     if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) {
-                        alert("Data inválida. Verifique o limite de dias para este mês.");
+                        showCustomAlert("Data inválida. Verifique o limite de dias para este mês.", "Data Inválida");
                         e.target.value = "";
                     }
                 }
@@ -510,66 +577,59 @@
                     return;
                 }
 
+                // Ordenar: esperando primeiro, finalizados depois
                 const waitingList = data.filter(p => p.status_atendimento !== 'finalizado');
                 const finishedList = data.filter(p => p.status_atendimento === 'finalizado');
+                const allSorted = [...waitingList, ...finishedList];
 
                 lista.innerHTML = '';
                 const histLista = document.getElementById('listaFinalizados');
                 if (histLista) histLista.innerHTML = '';
 
-                if (waitingList.length === 0) {
-                    lista.innerHTML = `<li class="p-12 text-center text-slate-400 flex flex-col items-center justify-center animate-fade-in-down"><i class="ph ph-coffee text-3xl mb-3 text-slate-300"></i><p>Fila vazia</p></li>`;
+                if (allSorted.length === 0) {
+                    lista.innerHTML = `<li class="p-12 text-center text-slate-400 flex flex-col items-center justify-center animate-fade-in-down"><i class="ph ph-coffee text-3xl mb-3 text-slate-300"></i><p>Base vazia</p></li>`;
                 }
 
-                waitingList.forEach(p => {
+                allSorted.forEach(p => {
                     const dataCriacao = p.created_at ? new Date(p.created_at) : new Date();
                     const horaChegada = dataCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const isFinalizado = p.status_atendimento === 'finalizado';
 
                     const li = document.createElement('li');
-                    li.className = 'p-4 hover:bg-slate-50 transition-colors border-l-2 border-transparent hover:border-indigo-500 animate-fade-in-down cursor-pointer group';
+                    li.className = 'p-4 hover:bg-slate-50 transition-colors border-l-2 border-transparent hover:border-indigo-500 animate-fade-in-down group';
 
                     const pacienteData = JSON.stringify({ id: p.id, nome: p.nome, convenio: p.convenio || 'Particular', chegada: horaChegada }).replace(/'/g, "&#39;");
-                    li.setAttribute('onclick', `abrirModal(${pacienteData})`);
+
+                    const statusBadge = isFinalizado
+                        ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-100">Finalizado</span>`
+                        : `<span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-indigo-100">Cadastrado</span>`;
 
                     li.innerHTML = `
                         <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">${p.nome.substring(0, 2).toUpperCase()}</div>
+                            <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="abrirModal(${pacienteData})">
+                                <div class="w-10 h-10 rounded-full ${isFinalizado ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'} flex items-center justify-center font-bold text-sm transition-all">${p.nome.substring(0, 2).toUpperCase()}</div>
                                 <div>
                                     <p class="text-sm font-bold text-slate-900 group-hover:text-indigo-700">${p.nome}</p>
                                     <div class="flex items-center gap-2 text-xs text-slate-500">
                                         <span class="bg-slate-100 px-1.5 py-0.5 rounded">${p.convenio || 'Particular'}</span>
-                                        <span class="flex items-center gap-1"><i class="ph-bold ph-clock"></i> ${horaChegada}</span>
+                                        ${statusBadge}
                                     </div>
                                 </div>
                             </div>
-                            <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-amber-100">Aguardando</span>
+                            <button onclick="confirmarExclusao('${p.id}', '${p.nome.replace(/'/g, "\\'")}')"
+                                class="ml-2 p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0" title="Excluir paciente">
+                                <i class="ph-bold ph-trash text-sm"></i>
+                            </button>
                         </div>
                     `;
                     lista.appendChild(li);
                 });
 
-                if (histLista) {
-                    if (finishedList.length === 0) {
-                        histLista.innerHTML = `<li class="p-8 text-center text-slate-400 text-sm">Nenhum atendimento finalizado hoje.</li>`;
-                    }
-                    finishedList.forEach(p => {
-                        const li = document.createElement('li');
-                        li.className = 'p-4 opacity-75 grayscale-[0.5] hover:bg-slate-50/50 transition-colors';
-                        li.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm">${p.nome.substring(0, 2).toUpperCase()}</div>
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-600 line-through">${p.nome}</p>
-                                        <p class="text-[10px] text-slate-400">Atendimento Concluído</p>
-                                    </div>
-                                </div>
-                                <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-100">Finalizado</span>
-                            </div>
-                        `;
-                        histLista.appendChild(li);
-                    });
+                // Esconder seção 'listaFinalizados' se existir (não usamos mais)
+                const histSection = document.getElementById('listaFinalizados');
+                if (histSection) {
+                    const parent = histSection.closest('section, div[class*="mt"]');
+                    if (parent) parent.style.display = 'none';
                 }
 
             } catch (error) {
@@ -607,35 +667,100 @@
             pacienteSelecionadoId = null;
         }
 
+        // === DIALOGS CUSTOMIZADOS ===
+        function showCustomAlert(msg, title = "Aviso") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalAlert');
+                document.getElementById('alert-title').textContent = title;
+                document.getElementById('alert-msg').textContent = msg;
+                modal.classList.remove('hidden');
+
+                const okBtn = document.getElementById('alert-ok');
+                const handler = () => {
+                    modal.classList.add('hidden');
+                    okBtn.removeEventListener('click', handler);
+                    resolve();
+                };
+                okBtn.addEventListener('click', handler);
+            });
+        }
+
+        function showCustomConfirm(msg, title = "Confirmação") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalConfirm');
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                modal.classList.remove('hidden');
+
+                const okBtn = document.getElementById('confirm-ok');
+                const cancelBtn = document.getElementById('confirm-cancel');
+
+                const onOk = () => {
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(true);
+                };
+                const onCancel = () => {
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(false);
+                };
+                const cleanup = () => {
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                };
+
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+            });
+        }
+
         async function excluirPaciente() {
             if (!pacienteSelecionadoId) return;
 
-            if (!confirm("Tem certeza que deseja excluir este paciente da fila? Esta ação não pode ser desfeita.")) return;
+            const confirmed = await showCustomConfirm("Deseja realmente excluir este paciente? Esta ação não pode ser desfeita.", "Excluir Paciente");
+            if (!confirmed) return;
 
-            const modalBtn = document.querySelector('#modalDetalhes button.bg-rose-600');
+            const modalBtn = document.querySelector('#modalDetalhes button.bg-rose-500\\/15');
             const originalText = modalBtn.innerHTML;
-            modalBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Excluindo...';
+            modalBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
             modalBtn.disabled = true;
 
             try {
-                // Endpoint CORRETO: GET api/delete
                 const response = await fetch(`${WEBHOOK_EXCLUIR}?id=${pacienteSelecionadoId}`, {
-                    method: 'GET', // Usar GET conforme configurado no n8n para evitar 404
+                    method: 'GET',
                     headers: { 'Accept': 'application/json' }
                 });
 
                 if (!response.ok) throw new Error('Falha na exclusão');
-
-                // Sucesso
                 fecharModal();
-                await carregarFila(); // Recarrega a lista do servidor
+                await carregarFila();
 
             } catch (e) {
                 console.error(e);
-                alert("Erro ao excluir paciente. Verifique sua conexão.");
+                showCustomAlert("Erro ao excluir paciente. Verifique sua conexão.", "Erro");
             } finally {
                 modalBtn.innerHTML = originalText;
                 modalBtn.disabled = false;
+            }
+        }
+
+        async function confirmarExclusao(id, nome) {
+            const confirmed = await showCustomConfirm(`Excluir o paciente "${nome}"? Esta ação não pode ser desfeita.`, "Confirmar Exclusão");
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`${WEBHOOK_EXCLUIR}?id=${id}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error('Falha na exclusão');
+                await carregarFila();
+
+            } catch (e) {
+                console.error(e);
+                showCustomAlert("Erro ao excluir paciente. Verifique sua conexão.", "Erro");
             }
         }
 
