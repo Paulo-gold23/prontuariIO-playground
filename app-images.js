@@ -202,36 +202,62 @@ function tirarFoto() {
 // UPLOAD DE ARQUIVO
 // ──────────────────────────────────────────────────────────────────────────────
 
+async function fixExifOrientation(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const img = new Image();
+            img.onload = () => {
+                // Ensure image bounds stay reasonable to avoid mobile crashes
+                let w = img.width;
+                let h = img.height;
+                const MAX_DIM = 2400;
+                if (w > MAX_DIM || h > MAX_DIM) {
+                    const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.92));
+            };
+            img.onerror = () => resolve(dataUrl);
+            img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 function onArquivoSelecionado(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     event.target.value = '';
 
     if (files.length === 1) {
-        // Preview antes de confirmar
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            _pendingDataUrl = e.target.result;
-            _pendingFile    = files[0];
+        const file = files[0];
+        fixExifOrientation(file).then((normalizedDataUrl) => {
+            _pendingDataUrl = normalizedDataUrl;
+            _pendingFile    = dataUrlToFile(normalizedDataUrl, file.name || `camera_${Date.now()}.jpg`);
             document.getElementById('cameraPreviewImg').src = _pendingDataUrl;
             document.getElementById('cameraDescricao').value = '';
             exibirTela('preview');
-        };
-        reader.readAsDataURL(files[0]);
+        });
     } else {
-        // Múltiplos arquivos — adiciona direto sem preview individual
         let loaded = 0;
         files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                adicionarFotoAoArray(e.target.result, file, '');
+            fixExifOrientation(file).then((normalizedDataUrl) => {
+                const newFile = dataUrlToFile(normalizedDataUrl, file.name || `camera_${Date.now()}.jpg`);
+                adicionarFotoAoArray(normalizedDataUrl, newFile, '');
                 loaded++;
                 if (loaded === files.length) {
                     fecharModalCamera();
                     showImageToast(`${files.length} foto(s) adicionada(s)!`);
                 }
-            };
-            reader.readAsDataURL(file);
+            });
         });
     }
 }
@@ -721,7 +747,7 @@ window.gerarRelatorioFotografico = async function ({ pacienteNome = 'Paciente', 
             const xPos = x + (FOTO_W - finalW) / 2;
             const yPos = y + (FOTO_H - finalH) / 2;
 
-            doc.addImage(dataUrl, 'JPEG', xPos, yPos, finalW, finalH, undefined, 'MEDIUM');
+            doc.addImage(dataUrl, 'JPEG', xPos, yPos, finalW, finalH, undefined, 'FAST');
         } catch (e) {
             // Se a imagem falhar, placeholder
             doc.setFillColor(248, 250, 252);

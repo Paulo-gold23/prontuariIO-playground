@@ -360,13 +360,13 @@ async function verHistorico(id, nome) {
       const vozUrl = c.audio_url ? await getSignedUrl("audios_consultas", c.audio_url) : null;
 
       const div = document.createElement("div");
-      div.className = "flex items-center justify-between p-5 bg-slate-50 rounded-2xl hover:bg-white border border-transparent hover:border-emerald-100 hover:shadow-lg transition-all group";
+      div.className = "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 bg-slate-50 rounded-2xl hover:bg-white border border-transparent hover:border-emerald-100 hover:shadow-lg transition-all group";
       div.innerHTML = `
-        <div class="flex items-center gap-4 min-w-0 flex-1 mr-3">
+        <div class="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
           <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
             <i class="ph-bold ph-calendar"></i>
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">${data}</p>
             <p class="text-xs text-slate-400 font-bold uppercase tracking-tight truncate">
               Atendimento Finalizado
@@ -375,10 +375,10 @@ async function verHistorico(id, nome) {
             </p>
           </div>
         </div>
-        <div class="flex gap-2 shrink-0 flex-wrap justify-end">
-          <a href="${pdfUrl || "#"}" target="_blank" class="px-4 py-2.5 bg-slate-900 text-white text-[10px] font-black rounded-xl hover:bg-emerald-600 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap">Prontuário</a>
-          ${imgUrl ? `<a href="${imgUrl}" target="_blank" class="px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-image text-xs"></i>Imagens</a>` : ""}
-          ${vozUrl ? `<a href="${vozUrl}" target="_blank" class="px-4 py-2.5 bg-violet-600 text-white text-[10px] font-black rounded-xl hover:bg-violet-700 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-waveform text-xs"></i>Voz</a>` : ""}
+        <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 custom-scrollbar shrink-0">
+          <a href="${pdfUrl || "#"}" target="_blank" class="flex-1 sm:flex-none px-4 py-2.5 bg-slate-900 text-white text-[10px] font-black rounded-xl hover:bg-emerald-600 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap text-center">Prontuário</a>
+          ${imgUrl ? `<a href="${imgUrl}" target="_blank" class="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap flex items-center justify-center gap-1"><i class="ph-bold ph-image text-xs"></i>Imagens</a>` : ""}
+          ${vozUrl ? `<a href="${vozUrl}" target="_blank" class="flex-1 sm:flex-none px-4 py-2.5 bg-violet-600 text-white text-[10px] font-black rounded-xl hover:bg-violet-700 transition-all uppercase tracking-widest shadow-xl whitespace-nowrap flex items-center justify-center gap-1"><i class="ph-bold ph-waveform text-xs"></i>Voz</a>` : ""}
         </div>
       `;
       content.appendChild(div);
