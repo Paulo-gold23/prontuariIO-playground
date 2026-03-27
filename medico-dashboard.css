@@ -1,0 +1,24 @@
+body { font-family: 'Outfit', sans-serif; }
+.glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+.premium-shadow { box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.02); }
+.animate-in { animation: fadeIn 0.4s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+/* Search & Filters */
+.search-input { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.search-input:focus { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+.filter-pill { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; user-select: none; }
+.filter-pill:hover { transform: translateY(-1px); }
+.filter-pill.active { transform: translateY(0); box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.25); }
+.sort-btn { transition: all 0.2s ease; }
+.sort-btn:hover { background: #f1f5f9; }
+.sort-btn.active { background: #f0fdf4; color: #059669; }
+.search-clear { transition: all 0.15s ease; }
+.search-clear:hover { background: #e2e8f0; }
+.filter-bar-enter { animation: slideDown 0.3s ease-out forwards; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.results-badge { transition: all 0.3s ease; }

@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50 antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recepção — formular.IO</title>
+    <!-- Reutilizando estilos e scripts do projeto -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Supabase SDK e Auth Guard -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="auth-guard.js"></script>
+    <script src="tenant-context.js"></script>
+    <script src="dark-mode.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: { 500: '#3b82f6', 600: '#2563eb' } },
+                    keyframes: {
+                        'fade-in-down': {
+                            '0%': { opacity: '0', transform: 'translateY(-10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'fade-in-down': 'fade-in-down 0.2s ease-out',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .status-message {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-align: center;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-message.error {
+            color: #ef4444;
+            background-color: #fca5a5;
+            border: 1px solid #f87171;
+        }
+
+        .status-message.success {
+            color: #10b981;
+            background-color: #a7f3d0;
+            border: 1px solid #34d399;
+        }
+
+        .status-message.loading {
+            color: #3b82f6;
+            background-color: #bfdbfe;
+            border: 1px solid #60a5fa;
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-600 overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="p-1.5 bg-indigo-600 text-white rounded-lg">
+                        <i class="ph-bold ph-user-list text-xl"></i>
+                    </div>
+                    <span class="font-bold text-xl text-slate-800">Recepção</span>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <a href="medico-dashboard.html"
+                        class="text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+                        <i class="ph-bold ph-stethoscope text-base sm:text-lg"></i> <span>Área Médica</span>
+                    </a>
+                    <span class="hidden sm:inline text-sm font-medium text-slate-500">Olá, Equipe</span>
+                    <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                        title="Modo Noturno">
+                        <i class="ph-bold ph-moon text-xl"></i>
+                    </button>
+                    <button onclick="logoutSecretaria()"
+                        class="text-sm text-rose-500 hover:text-rose-700 font-medium">Sair</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        // Trava de segurança da Secretária
+        const secretariaAtiva = localStorage.getItem('secretaria_ativa');
+        if (!secretariaAtiva) {
+            window.location.href = 'login.html';
+        }
+
+        // === POPULAR MEDICO_ID e CLINICA_ID nos campos hidden ===
+        // Roda no DOMContentLoaded para garantir que os campos já existem
+        document.addEventListener('DOMContentLoaded', async function() {
+            // ── medico_id ──
+            let medicoId = window.getMedicoId ? window.getMedicoId() : null;
+            if (!medicoId) {
+                try {
+                    const raw = localStorage.getItem('medico_ativo');
+                    if (raw) { medicoId = JSON.parse(raw).id || null; }
+                } catch(e) {}
+            }
+            if (medicoId) {
+                const el = document.getElementById('hidden_medico_id');
+                if (el) el.value = medicoId;
+                console.log('[recepcao] medico_id carregado:', medicoId);
+            } else {
+                console.warn('[recepcao] medico_id NÃO encontrado. Faça logout e login novamente.');
+            }
+
+            // ── clinica_id (resolve via TenantContext ou Supabase direto) ──
+            let clinicaId = null;
+            try {
+                if (window.TenantContext) {
+                    const ctx = await window.TenantContext.resolve();
+                    if (ctx && ctx.clinicaId) clinicaId = ctx.clinicaId;
+                }
+            } catch(e) {}
+            // Fallback direto
+            if (!clinicaId && window.supabaseClient) {
+                try {
+                    const { data: { session } } = await window.supabaseClient.auth.getSession();
+                    if (session?.user?.id) {
+                        const { data: mRow } = await window.supabaseClient
+                            .from('medicos').select('clinica_id')
+                            .eq('auth_user_id', session.user.id).single();
+                        if (mRow && mRow.clinica_id) clinicaId = mRow.clinica_id;
+                    }
+                } catch(e) {}
+            }
+            if (clinicaId) {
+                const el = document.getElementById('hidden_clinica_id');
+                if (el) el.value = clinicaId;
+                console.log('[recepcao] clinica_id carregado:', clinicaId);
+            }
+        });
+
+        async function logoutSecretaria() {
+            if (window.TenantContext && window.TenantContext.clear) window.TenantContext.clear();
+            try { if (supabaseClient && supabaseClient.auth) await supabaseClient.auth.signOut(); } catch(e) {}
+            localStorage.removeItem('secretaria_ativa');
+            localStorage.removeItem('medico_ativo');
+            localStorage.removeItem('user_role');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <!-- Coluna 1: Cadastro Completo -->
+            <div class="md:col-span-1">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="ph-fill ph-plus-circle text-indigo-600"></i> Novo Paciente
+                    </h2>
+
+                    <form id="formCadastro" class="space-y-4">
+                        <!-- medico_id e clinica_id são injetados automaticamente pelo JavaScript -->
+                        <input type="hidden" name="medico_id" id="hidden_medico_id" value="">
+                        <input type="hidden" name="clinica_id" id="hidden_clinica_id" value="">
+                        <!-- Nome -->
+                        <div>
+                            <label for="nome" class="block text-sm font-semibold text-slate-700 mb-1">Nome Completo
+                                <span class="text-rose-500">*</span></label>
+                            <input type="text" id="nome" name="nome" required placeholder="Ex: João da Silva"
+                                class="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 border transition-all text-slate-800 bg-slate-50 focus:bg-white hover:border-indigo-300">
+                        </div>
+
+                        <!-- Data Nascimento e Sexo -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="data_nascimento"
+                                    class="block text-sm font-semibold text-slate-700 mb-1">Nascimento <span
+                                        class="text-rose-500">*</span></label>
+                                <input type="text" id="data_nascimento" name="data_nascimento" required
+                                    placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+                                    class="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 border transition-all text-slate-800 bg-slate-50 focus:bg-white hover:border-indigo-300">
+                            </div>
+
+                            <!-- Custom Select: Sexo -->
+                            <div class="relative custom-select-container" id="select-sexo">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Sexo</label>
+                                <button type="button"
+                                    class="custom-select-trigger w-full bg-slate-50 border border-slate-200 text-slate-800 py-2.5 px-3 rounded-xl text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center hover:bg-white">
+                                    <span class="selected-text text-slate-400 text-sm">Selecione</span>
+                                    <i class="ph-bold ph-caret-down text-slate-400"></i>
+                                </button>
+                                <div
+                                    class="custom-options hidden absolute z-50 mt-1 w-full bg-white shadow-xl rounded-xl border border-slate-100 max-h-60 overflow-auto py-1 animate-fade-in-down origin-top">
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="M">
+                                        Masculino</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="F">
+                                        Feminino</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="O">
+                                        Outro</div>
+                                </div>
+                                <input type="hidden" name="sexo" id="sexo">
+                            </div>
+                        </div>
+
+                        <!-- Telefone e Convênio -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="telefone" class="block text-sm font-semibold text-slate-700 mb-1">Telefone
+                                    <span class="text-rose-500">*</span></label>
+                                <input type="tel" id="telefone" name="telefone" required placeholder="(99) 99999-9999"
+                                    maxlength="15"
+                                    class="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 border transition-all text-slate-800 bg-slate-50 focus:bg-white hover:border-indigo-300">
+                            </div>
+
+                            <!-- Custom Select: Convênio -->
+                            <div class="relative custom-select-container" id="select-convenio">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Convênio</label>
+                                <button type="button"
+                                    class="custom-select-trigger w-full bg-slate-50 border border-slate-200 text-slate-800 py-2.5 px-3 rounded-xl text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center hover:bg-white">
+                                    <span class="selected-text text-slate-400 text-sm">Selecione</span>
+                                    <i class="ph-bold ph-caret-down text-slate-400"></i>
+                                </button>
+                                <div
+                                    class="custom-options hidden absolute z-50 mt-1 w-full bg-white shadow-xl rounded-xl border border-slate-100 max-h-60 overflow-auto py-1 animate-fade-in-down origin-top">
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
+                                        data-value="Particular">Particular</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
+                                        data-value="Unimed">Unimed</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
+                                        data-value="Bradesco Saúde">Bradesco Saúde</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
+                                        data-value="Medsênior">Medsênior</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="Samp">
+                                        Samp</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="SUS">
+                                        SUS</div>
+                                </div>
+                                <input type="hidden" name="convenio" id="convenio">
+                            </div>
+                        </div>
+
+                        <!-- Endereço e UF -->
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="col-span-2">
+                                <label for="cidade"
+                                    class="block text-sm font-semibold text-slate-700 mb-1">Cidade</label>
+                                <input type="text" id="cidade" name="cidade" placeholder="Ex: Vitória"
+                                    class="w-full rounded-xl border-slate-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 border transition-all text-slate-800 bg-slate-50 focus:bg-white hover:border-indigo-300">
+                            </div>
+                            <div class="relative custom-select-container" id="select-uf">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">UF</label>
+                                <button type="button"
+                                    class="custom-select-trigger w-full bg-slate-50 border border-slate-200 text-slate-800 py-2.5 px-3 rounded-xl text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center hover:bg-white">
+                                    <span class="selected-text text-slate-400 text-sm truncate">UF</span>
+                                    <i class="ph-bold ph-caret-down text-slate-400"></i>
+                                </button>
+                                <div
+                                    class="custom-options hidden absolute right-0 z-50 mt-1 w-48 bg-white shadow-xl rounded-xl border border-slate-100 max-h-60 overflow-auto py-1 animate-fade-in-down origin-top">
+                                    <!-- Populated in JS -->
+                                </div>
+                                <input type="hidden" name="uf" id="uf">
+                            </div>
+                        </div>
+
+                        <!-- Responsável (Details) -->
+                        <div class="pt-2">
+                            <details class="group">
+                                <summary
+                                    class="flex items-center cursor-pointer text-sm text-indigo-600 font-semibold hover:text-indigo-700 outline-none select-none transition-colors p-2 rounded-lg hover:bg-indigo-50 w-full">
+                                    <i class="ph ph-caret-right mr-2 transition-transform group-open:rotate-90"></i>
+                                    Dados do Responsável (Opcional)
+                                </summary>
+                                <div class="mt-2 space-y-3 pl-4 border-l-2 border-indigo-100 ml-2 animate-fade-in-down">
+                                    <div>
+                                        <label for="responsavel_nome"
+                                            class="block text-xs font-medium text-slate-700 mb-1">Nome do
+                                            Responsável</label>
+                                        <input type="text" id="responsavel_nome" name="responsavel_nome"
+                                            class="w-full rounded-lg border-slate-200 text-sm py-2 px-3 bg-slate-50">
+                                    </div>
+                                    <div>
+                                        <label for="responsavel_parentesco"
+                                            class="block text-xs font-medium text-slate-700 mb-1">Parentesco</label>
+                                        <input type="text" id="responsavel_parentesco" name="responsavel_parentesco"
+                                            class="w-full rounded-lg border-slate-200 text-sm py-2 px-3 bg-slate-50">
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+
+                        <div id="statusCadastro" class="text-sm font-medium text-center min-h-[24px]"></div>
+
+                        <button type="submit"
+                            class="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95">
+                            Cadastrar e Enviar para Fila
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Coluna 2: Fila e Histórico -->
+            <div class="md:col-span-2 space-y-8">
+                <!-- Fila de Espera -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-5 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="ph-bold ph-users text-indigo-500"></i>
+                            Base de Pacientes / Fila
+                        </h2>
+                        <button onclick="carregarFila()"
+                            class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <ul class="divide-y divide-slate-100" id="listaEspera">
+                        <!-- Estado inicial controlado via JS -->
+                    </ul>
+                </div>
+
+                <!-- Lista de Finalizados -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-5">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="ph-bold ph-check-circle text-emerald-500"></i>
+                            Atendimentos Finalizados (Hoje)
+                        </h2>
+                    </div>
+
+                    <ul class="divide-y divide-slate-100" id="listaFinalizados">
+                        <li class="p-8 text-center text-slate-400">
+                            <p class="text-sm">Nenhum atendimento finalizado hoje.</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal Detalhes Paciente -->
+    <div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
+        aria-modal="true" aria-labelledby="modal-nome">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="fecharModal()"></div>
+
+        <!-- Card do Modal -->
+        <div class="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-down"
+            style="background: linear-gradient(135deg, #1e2235 0%, #161927 100%);">
+
+            <!-- Header com avatar e nome -->
+            <div class="px-6 pt-7 pb-5">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+                        <i class="ph-bold ph-user text-indigo-400 text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Detalhes do
+                            Paciente</p>
+                        <h3 class="text-lg font-bold text-white leading-tight" id="modal-nome">Nome do Paciente</h3>
+                    </div>
+                    <button onclick="fecharModal()"
+                        class="ml-auto p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divisor -->
+            <div class="h-px bg-white/5 mx-6"></div>
+
+            <!-- Info -->
+            <div class="px-6 py-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Convênio</span>
+                    <span class="text-sm font-semibold text-slate-200" id="modal-convenio">-</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Chegada</span>
+                    <span class="text-sm font-semibold text-slate-200" id="modal-chegada">-</span>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                    <span
+                        class="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0 mt-0.5">ID</span>
+                    <span class="text-xs font-mono text-slate-400 bg-white/5 px-2 py-1 rounded-lg break-all text-right"
+                        id="modal-id">-</span>
+                </div>
+            </div>
+
+            <!-- Divisor -->
+            <div class="h-px bg-white/5 mx-6"></div>
+
+            <!-- Ações -->
+            <div class="px-6 py-5 flex gap-3">
+                <button type="button" onclick="excluirPaciente()"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-rose-500/15 text-rose-400 border border-rose-500/25 hover:bg-rose-500/25 hover:text-rose-300 rounded-xl text-sm font-bold transition-all flex-1 justify-center">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+                <button type="button" onclick="fecharModal()"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all flex-1 justify-center shadow-lg shadow-indigo-500/25">
+                    <i class="ph-bold ph-check"></i> Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado -->
+    <div id="modalConfirm" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
+            style="background: #1e2235;">
+            <div class="p-8 text-center">
+                <div
+                    class="w-16 h-16 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5 border border-amber-500/20">
+                    <i class="ph-bold ph-warning text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3" id="confirm-title">Atenção</h3>
+                <p class="text-slate-400 text-sm leading-relaxed" id="confirm-msg">Tem certeza que deseja realizar esta
+                    ação?</p>
+            </div>
+            <div class="flex border-t border-white/5">
+                <button id="confirm-cancel"
+                    class="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-white/5 transition-colors border-r border-white/5 uppercase tracking-widest">Cancelar</button>
+                <button id="confirm-ok"
+                    class="flex-1 py-4 text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-colors uppercase tracking-widest">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta Customizado -->
+    <div id="modalAlert" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
+            style="background: #1e2235;">
+            <div class="p-8 text-center">
+                <div
+                    class="w-16 h-16 bg-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-5 border border-indigo-500/20">
+                    <i class="ph-bold ph-info text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3" id="alert-title">Aviso</h3>
+                <p class="text-slate-400 text-sm leading-relaxed" id="alert-msg">Mensagem decuidado.</p>
+            </div>
+            <button id="alert-ok"
+                class="w-full py-5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors uppercase tracking-widest rounded-b-3xl">Entendido</button>
+        </div>
+    </div>
+
+    <script>
+        // === MÁSCARAS & UTILS ===
+        const inputNome = document.getElementById("nome");
+        const inputTelefone = document.getElementById("telefone");
+        const inputNascimento = document.getElementById("data_nascimento");
+
+        if (inputNome) inputNome.addEventListener("input", (e) => e.target.value = e.target.value.replace(/[0-9]/g, ""));
+
+        if (inputTelefone) {
+            inputTelefone.addEventListener("input", (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+                v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+                e.target.value = v;
+            });
+        }
+
+        if (inputNascimento) {
+            inputNascimento.addEventListener("input", (e) => {
+                let v = e.target.value.replace(/\D/g, "").slice(0, 8);
+
+                // Validação Inteligente Dia/Mês/Ano
+                if (v.length >= 2) {
+                    let day = parseInt(v.substring(0, 2));
+                    if (day > 31) v = '31' + v.substring(2);
+                    else if (day < 1 && v.substring(0, 2).length === 2) v = '01' + v.substring(2);
+                }
+                if (v.length >= 4) {
+                    let month = parseInt(v.substring(2, 4));
+                    if (month > 12) v = v.substring(0, 2) + '12' + v.substring(4);
+                    else if (month < 1 && v.substring(2, 4).length === 2) v = v.substring(0, 2) + '01' + v.substring(4);
+                }
+                if (v.length >= 8) {
+                    let year = parseInt(v.substring(4, 8));
+                    const currentYear = new Date().getFullYear();
+                    // Limita anos bizarros
+                    if (year < 1900) v = v.substring(0, 4) + '1900';
+                    else if (year > currentYear) v = v.substring(0, 4) + currentYear;
+                }
+
+                // Aplica a formatação em '/ ' 
+                if (v.length > 4) v = v.replace(/^(\d{2})(\d{2})(\d+)/, "$1/$2/$3");
+                else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)/, "$1/$2");
+
+                e.target.value = v;
+            });
+            inputNascimento.addEventListener("blur", (e) => {
+                const v = e.target.value;
+                if (v.length > 0 && v.length < 10) {
+                    // Limpa se deixou a data na metade cortada
+                    showCustomAlert("A data deve estar no formato DD/MM/AAAA", "Data Incompleta");
+                    e.target.value = "";
+                } else if (v.length === 10) {
+                    const [d, m, y] = v.split('/').map(Number);
+                    const date = new Date(y, m - 1, d);
+                    // Verificação extra para fevereiro bissexto ou dias impossiveis (ex 31/02)
+                    if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) {
+                        showCustomAlert("Data inválida. Verifique o limite de dias para este mês.", "Data Inválida");
+                        e.target.value = "";
+                    }
+                }
+            });
+        }
+
+        // === CUSTOM SELECTS ===
+        const estadosBR = { 'AC': 'Acre', 'AL': 'Alagoas', 'ES': 'Espírito Santo', 'MG': 'Minas Gerais', 'RJ': 'Rio de Janeiro', 'SP': 'São Paulo' }; // Simplificado para exemplo
+
+        function initCustomSelects() {
+            // Populate UF
+            const ufContainer = document.querySelector('#select-uf .custom-options');
+            if (ufContainer) {
+                ufContainer.innerHTML = '';
+                Object.keys(estadosBR).sort().forEach(sigla => {
+                    const div = document.createElement('div');
+                    div.className = 'option p-2 hover:bg-indigo-50 cursor-pointer text-sm';
+                    div.dataset.value = sigla;
+                    div.textContent = sigla;
+                    ufContainer.appendChild(div);
+                });
+            }
+
+            document.querySelectorAll('.custom-select-container').forEach(container => {
+                const trigger = container.querySelector('.custom-select-trigger');
+                const options = container.querySelector('.custom-options');
+                const hiddenInput = container.querySelector('input[type="hidden"]');
+                const selectedText = container.querySelector('.selected-text');
+                const caret = container.querySelector('.ph-caret-down');
+
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.custom-options').forEach(opt => opt !== options && opt.classList.add('hidden'));
+                    options.classList.toggle('hidden');
+                });
+
+                options.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('option')) {
+                        const val = e.target.dataset.value;
+                        const txt = e.target.textContent;
+                        hiddenInput.value = val;
+                        selectedText.textContent = txt;
+                        selectedText.classList.remove('text-slate-400');
+                        selectedText.classList.add('text-slate-800');
+                        options.classList.add('hidden');
+                    }
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select-container')) {
+                    document.querySelectorAll('.custom-options').forEach(opt => opt.classList.add('hidden'));
+                }
+            });
+        }
+        initCustomSelects();
+
+        // === INTEGRAÇÃO COM N8N ===
+        const WEBHOOK_CADASTRO = "https://n8n.srv1181762.hstgr.cloud/webhook/cadastroPaciente";
+        const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
+        const WEBHOOK_EXCLUIR = "https://n8n.srv1181762.hstgr.cloud/webhook/delete_paciente";
+
+        // ── Helper: resolve clinica_id do médico logado ──
+        async function resolverClinicaId() {
+            // 1) Tenta TenantContext
+            if (window.TenantContext) {
+                try {
+                    const ctx = await window.TenantContext.resolve();
+                    if (ctx && ctx.type === 'CLINIC' && ctx.clinicaId) {
+                        console.log('[recepcao] TenantContext → clinica_id:', ctx.clinicaId);
+                        return ctx.clinicaId;
+                    }
+                } catch (e) {
+                    console.warn('[recepcao] TenantContext falhou:', e.message);
+                }
+            }
+            // 2) Fallback direto ao Supabase
+            try {
+                if (!window.supabaseClient) return null;
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session?.user?.id) return null;
+                const { data: mRow } = await window.supabaseClient
+                    .from('medicos')
+                    .select('id, clinica_id')
+                    .eq('auth_user_id', session.user.id)
+                    .single();
+                if (mRow && mRow.clinica_id) {
+                    console.log('[recepcao] Fallback direto → clinica_id:', mRow.clinica_id);
+                    return mRow.clinica_id;
+                }
+            } catch (e) { /* ignora */ }
+            return null;
+        }
+
+        // ── Busca pacientes da clínica direto no Supabase ──
+        async function fetchPacientesClinicaRecepcao(clinicaId) {
+            if (!window.supabaseClient) return [];
+            const { data, error } = await window.supabaseClient
+                .from('pacientes')
+                .select('id, nome, convenio, created_at, medico_id, clinica_id, consultas(status, created_at)')
+                .eq('clinica_id', clinicaId)
+                .order('created_at', { ascending: false });
+            if (error) {
+                console.error('[recepcao] Erro fetchPacientesClinica:', error.message);
+                return [];
+            }
+            return (data || []).map(p => {
+                const ultConsulta = p.consultas && p.consultas.length > 0
+                    ? p.consultas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+                    : null;
+                let status_atendimento = 'cadastrado';
+                if (ultConsulta) {
+                    status_atendimento = ultConsulta.status === 'finalizado' ? 'finalizado' : 'em_atendimento';
+                }
+                const { consultas: _drop, ...rest } = p;
+                return { ...rest, status_atendimento };
+            });
+        }
+
+        // Função para carregar a fila
+        async function carregarFila() {
+            const lista = document.getElementById('listaEspera');
+            if (!lista) return;
+
+            try {
+                let data = [];
+
+                // ── PASSO 1: Tentar modo CLÍNICA ──
+                const clinicaId = await resolverClinicaId();
+
+                if (clinicaId) {
+                    // CLÍNICA: busca direto no Supabase por clinica_id
+                    console.warn('[recepcao] ★ Modo CLÍNICA → clinica_id:', clinicaId);
+                    data = await fetchPacientesClinicaRecepcao(clinicaId);
+                } else {
+                    // STANDALONE: usa n8n webhook com medico_id
+                    const medicoId = window.getMedicoId ? window.getMedicoId() : '';
+                    console.warn('[recepcao] Modo STANDALONE → medico_id:', medicoId);
+                    const url = `${WEBHOOK_LISTAR}?medico_id=${encodeURIComponent(medicoId)}&t=${new Date().getTime()}`;
+
+                    const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
+                    const response = await fetch(url, { headers: { ...authHeaders } });
+                    if (!response.ok) throw new Error('Erro ao buscar fila');
+
+                    let raw = await response.json();
+                    if (raw.all_pacientes) raw = raw.all_pacientes;
+                    if (!Array.isArray(raw)) raw = [raw];
+                    data = raw;
+                }
+
+                // Filtrar nulos/vazios
+                data = data.filter(p => p && p.nome);
+                console.warn('[recepcao] Total pacientes carregados:', data.length);
+
+                lista.innerHTML = ''; // Limpa antes de renderizar
+
+                if (data.length === 0) {
+                    lista.innerHTML = `
+                        <li class="p-12 text-center text-slate-400 flex flex-col items-center justify-center h-48 animate-fade-in-down">
+                            <div class="bg-slate-50 p-4 rounded-full mb-3">
+                                <i class="ph ph-coffee text-3xl text-slate-300"></i>
+                            </div>
+                            <p class="font-medium text-slate-500">Sem pacientes na fila</p>
+                            <p class="text-xs text-slate-400 mt-1">Cadastre um novo paciente ao lado</p>
+                        </li>
+                    `;
+                    return;
+                }
+
+                // Ordenar: esperando primeiro, finalizados depois
+                const waitingList = data.filter(p => p.status_atendimento !== 'finalizado');
+                const finishedList = data.filter(p => p.status_atendimento === 'finalizado');
+                const allSorted = [...waitingList, ...finishedList];
+
+                lista.innerHTML = '';
+                const histLista = document.getElementById('listaFinalizados');
+                if (histLista) histLista.innerHTML = '';
+
+                if (allSorted.length === 0) {
+                    lista.innerHTML = `<li class="p-12 text-center text-slate-400 flex flex-col items-center justify-center animate-fade-in-down"><i class="ph ph-coffee text-3xl mb-3 text-slate-300"></i><p>Base vazia</p></li>`;
+                }
+
+                allSorted.forEach(p => {
+                    const dataCriacao = p.created_at ? new Date(p.created_at) : new Date();
+                    const horaChegada = dataCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const isFinalizado = p.status_atendimento === 'finalizado';
+
+                    const li = document.createElement('li');
+                    li.className = 'p-4 hover:bg-slate-50 transition-colors border-l-2 border-transparent hover:border-indigo-500 animate-fade-in-down group';
+
+                    const pacienteData = JSON.stringify({ id: p.id, nome: p.nome, convenio: p.convenio || 'Particular', chegada: horaChegada }).replace(/'/g, "&#39;");
+
+                    const statusBadge = isFinalizado
+                        ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-100">Finalizado</span>`
+                        : `<span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-indigo-100">Cadastrado</span>`;
+
+                    li.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="abrirModal(${pacienteData})">
+                                <div class="w-10 h-10 rounded-full ${isFinalizado ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'} flex items-center justify-center font-bold text-sm transition-all">${p.nome.substring(0, 2).toUpperCase()}</div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-900 group-hover:text-indigo-700">${p.nome}</p>
+                                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                                        <span class="bg-slate-100 px-1.5 py-0.5 rounded">${p.convenio || 'Particular'}</span>
+                                        ${statusBadge}
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="confirmarExclusao('${p.id}', '${p.nome.replace(/'/g, "\\'")}')"
+                                class="ml-2 p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0" title="Excluir paciente">
+                                <i class="ph-bold ph-trash text-sm"></i>
+                            </button>
+                        </div>
+                    `;
+                    lista.appendChild(li);
+                });
+
+                // Esconder seção 'listaFinalizados' se existir (não usamos mais)
+                const histSection = document.getElementById('listaFinalizados');
+                if (histSection) {
+                    const parent = histSection.closest('section, div[class*="mt"]');
+                    if (parent) parent.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar fila:", error);
+                lista.innerHTML = `
+                    <li class="p-8 text-center text-rose-400 flex flex-col items-center">
+                        <i class="ph-bold ph-warning-circle text-2xl mb-2"></i>
+                        <p class="text-sm">Falha ao buscar lista.</p>
+                        <button onclick="carregarFila()" class="mt-2 text-xs font-bold underline hover:text-rose-600">Tentar novamente</button>
+                    </li>
+                `;
+            }
+        }
+
+        // === MODAL DETALHES & EXCLUSÃO ===
+        let pacienteSelecionadoId = null;
+
+        function abrirModal(paciente) {
+            pacienteSelecionadoId = paciente.id;
+            document.getElementById('modal-nome').textContent = paciente.nome;
+            document.getElementById('modal-convenio').textContent = paciente.convenio;
+            document.getElementById('modal-chegada').textContent = paciente.chegada;
+            document.getElementById('modal-id').textContent = paciente.id || 'N/A';
+
+            const modal = document.getElementById('modalDetalhes');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.querySelector('div[class*="transform"]').classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function fecharModal() {
+            const modal = document.getElementById('modalDetalhes');
+            modal.classList.add('hidden');
+            pacienteSelecionadoId = null;
+        }
+
+        // === DIALOGS CUSTOMIZADOS ===
+        function showCustomAlert(msg, title = "Aviso") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalAlert');
+                document.getElementById('alert-title').textContent = title;
+                document.getElementById('alert-msg').textContent = msg;
+                modal.classList.remove('hidden');
+
+                const okBtn = document.getElementById('alert-ok');
+                const handler = () => {
+                    modal.classList.add('hidden');
+                    okBtn.removeEventListener('click', handler);
+                    resolve();
+                };
+                okBtn.addEventListener('click', handler);
+            });
+        }
+
+        function showCustomConfirm(msg, title = "Confirmação") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalConfirm');
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                modal.classList.remove('hidden');
+
+                const okBtn = document.getElementById('confirm-ok');
+                const cancelBtn = document.getElementById('confirm-cancel');
+
+                const onOk = () => {
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(true);
+                };
+                const onCancel = () => {
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(false);
+                };
+                const cleanup = () => {
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                };
+
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+            });
+        }
+
+        async function excluirPaciente() {
+            if (!pacienteSelecionadoId) return;
+
+            const confirmed = await showCustomConfirm("Deseja realmente excluir este paciente? Esta ação não pode ser desfeita.", "Excluir Paciente");
+            if (!confirmed) return;
+
+            const modalBtn = document.querySelector('#modalDetalhes button.bg-rose-500\\/15');
+            const originalText = modalBtn.innerHTML;
+            modalBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
+            modalBtn.disabled = true;
+
+            try {
+                const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
+                const medicoIdDel = window.getMedicoId ? window.getMedicoId() : '';
+                const response = await fetch(`${WEBHOOK_EXCLUIR}?id=${pacienteSelecionadoId}&medico_id=${encodeURIComponent(medicoIdDel)}`, {
+                    method: 'GET',
+                    headers: { 
+                        'Accept': 'application/json',
+                        ...authHeaders 
+                    }
+                });
+
+                if (!response.ok) throw new Error('Falha na exclusão');
+                fecharModal();
+                await carregarFila();
+
+            } catch (e) {
+                console.error(e);
+                showCustomAlert("Erro ao excluir paciente. Verifique sua conexão.", "Erro");
+            } finally {
+                modalBtn.innerHTML = originalText;
+                modalBtn.disabled = false;
+            }
+        }
+
+        async function confirmarExclusao(id, nome) {
+            const confirmed = await showCustomConfirm(`Excluir o paciente "${nome}"? Esta ação não pode ser desfeita.`, "Confirmar Exclusão");
+            if (!confirmed) return;
+
+            try {
+                const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
+                const medicoIdDel2 = window.getMedicoId ? window.getMedicoId() : '';
+                const response = await fetch(`${WEBHOOK_EXCLUIR}?id=${id}&medico_id=${encodeURIComponent(medicoIdDel2)}`, {
+                    method: 'GET',
+                    headers: { 
+                        'Accept': 'application/json',
+                        ...authHeaders
+                    }
+                });
+
+                if (!response.ok) throw new Error('Falha na exclusão');
+                await carregarFila();
+
+            } catch (e) {
+                console.error(e);
+                showCustomAlert("Erro ao excluir paciente. Verifique sua conexão.", "Erro");
+            }
+        }
+
+        // Fechar modal com ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") fecharModal();
+        });
+
+        // Carregar fila ao iniciar
+        document.addEventListener('DOMContentLoaded', carregarFila);
+        // Atualizar fila a cada 30s
+        setInterval(carregarFila, 30000);
+
+        document.getElementById('formCadastro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('statusCadastro');
+
+            // Coletar dados
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            // Validar campos obrigatórios (extra backup)
+            if (!data.nome || !data.data_nascimento || !data.telefone) {
+                statusDiv.textContent = "⚠️ Preencha os campos obrigatórios (*)";
+                statusDiv.className = "status-message error";
+                return;
+            }
+
+            // Fallback for Convenio if nothing was selected
+            if (!data.convenio || data.convenio.trim() === '') {
+                data.convenio = 'Particular';
+            }
+
+            statusDiv.textContent = "⏳ Enviando para o sistema...";
+            statusDiv.className = "status-message loading";
+
+            // CORREÇÃO DE DATA: Converter DD/MM/AAAA para AAAA-MM-DD
+            if (data.data_nascimento && data.data_nascimento.includes('/')) {
+                const parts = data.data_nascimento.split('/');
+                if (parts.length === 3) {
+                    data.data_nascimento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+            }
+
+            // === MEDICO_ID ===  
+            // Tenta: 1) FormData hidden, 2) getMedicoId(), 3) localStorage direto
+            if (!data.medico_id || data.medico_id.trim() === '') {
+                const mid = window.getMedicoId ? window.getMedicoId() : null;
+                if (mid) {
+                    data.medico_id = mid;
+                } else {
+                    // Última tentativa: ler direto do localStorage
+                    try {
+                        const raw = localStorage.getItem('medico_ativo');
+                        if (raw) data.medico_id = JSON.parse(raw).id;
+                    } catch(e) {}
+                }
+            }
+            if (!data.medico_id || data.medico_id.trim() === '') {
+                statusDiv.textContent = "❌ Médico não identificado. Faça logout e login novamente.";
+                statusDiv.className = "status-message error";
+                return;
+            }
+
+            // === CLINICA_ID ===
+            // Garante que para médicos de clínica, o clinica_id é enviado
+            if (!data.clinica_id || data.clinica_id.trim() === '') {
+                try {
+                    const cid = await resolverClinicaId();
+                    if (cid) data.clinica_id = cid;
+                } catch(e) {}
+            }
+            // Remove clinica_id vazio para não enviar "" ao webhook
+            if (!data.clinica_id || data.clinica_id.trim() === '') {
+                delete data.clinica_id;
+            }
+
+            try {
+                // Converter para Query Params (já que o webhook é GET)
+                const params = new URLSearchParams(data).toString();
+                const url = `${WEBHOOK_CADASTRO}?${params}`;
+
+                const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
+                const response = await fetch(url, {
+                    method: 'GET', // Webhook configurado como GET
+                    headers: { 
+                        'Accept': 'application/json',
+                        ...authHeaders
+                    }
+                });
+
+                const responseText = await response.text();
+
+                if (!response.ok) {
+                    throw new Error(`Erro Servidor: ${response.status} - ${responseText}`);
+                }
+
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`Resposta não é JSON válido: ${responseText.substring(0, 50)}...`);
+                }
+
+                if (result) {
+                    statusDiv.textContent = "✅ Paciente cadastrado com sucesso!";
+                    statusDiv.className = "status-message success";
+                    e.target.reset();
+
+                    // Reset visual selects
+                    document.querySelectorAll('.selected-text').forEach(s => {
+                        s.textContent = 'Selecione';
+                        s.classList.add('text-slate-400');
+                    });
+
+                    // Recarregar lista para confirmar que foi pro banco
+                    carregarFila();
+
+                } else {
+                    throw new Error('Erro na resposta do servidor');
+                }
+            } catch (error) {
+                console.error(error);
+                statusDiv.textContent = "❌ Erro ao conectar com o servidor. Tente novamente.";
+                statusDiv.className = "status-message error";
+            }
+
+            setTimeout(() => {
+                if (statusDiv.className.includes('success')) {
+                    statusDiv.textContent = "";
+                    statusDiv.className = "";
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+
+</html>
