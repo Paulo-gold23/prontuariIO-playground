@@ -52,10 +52,20 @@ function setupModalCamera() {
         }
     });
 
-    // Botões do menu
-    el('btnAbrirCamera')  ?.addEventListener('click', iniciarCameraAoVivo);
+    el('btnAbrirCamera')?.addEventListener('click', () => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            const inputNativo = el('inputCameraNativa');
+            if (inputNativo) {
+                inputNativo.click();
+                return;
+            }
+        }
+        iniciarCameraAoVivo();
+    });
     el('btnAbrirUpload')  ?.addEventListener('click', () => el('inputArquivoFoto')?.click());
     el('inputArquivoFoto')?.addEventListener('change', onArquivoSelecionado);
+    el('inputCameraNativa')?.addEventListener('change', onArquivoSelecionado);
 
     // Toolbar câmera
     el('btnVoltarAoMenu')?.addEventListener('click', () => exibirTela('menu'));
@@ -695,7 +705,23 @@ window.gerarRelatorioFotografico = async function ({ pacienteNome = 'Paciente', 
 
         // Imagem
         try {
-            doc.addImage(dataUrl, 'JPEG', x, y, FOTO_W, FOTO_H, undefined, 'MEDIUM');
+            const imgObj = new Image();
+            await new Promise((resolve) => {
+                imgObj.onload = resolve;
+                imgObj.onerror = resolve;
+                imgObj.src = dataUrl;
+            });
+
+            const iW = imgObj.width || FOTO_W;
+            const iH = imgObj.height || FOTO_H;
+            const scale = Math.min(FOTO_W / iW, FOTO_H / iH);
+            const finalW = iW * scale;
+            const finalH = iH * scale;
+
+            const xPos = x + (FOTO_W - finalW) / 2;
+            const yPos = y + (FOTO_H - finalH) / 2;
+
+            doc.addImage(dataUrl, 'JPEG', xPos, yPos, finalW, finalH, undefined, 'MEDIUM');
         } catch (e) {
             // Se a imagem falhar, placeholder
             doc.setFillColor(248, 250, 252);
