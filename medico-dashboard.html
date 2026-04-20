@@ -513,22 +513,23 @@
         for (const item of hist.slice(0, 8)) {
           const dataC = new Date(item.data_hora);
           const dataFmt = dataC.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-          const pdfUrl = await getSignedUrl("prontuarios_pdf", item.consulta_id + ".pdf");
+          const pdfUrl  = await getSignedUrl("prontuarios_pdf", item.pdf_url || (item.consulta_id + ".pdf"));
 
-          // Detecta PDF de imagens: 1) campo do banco, 2) arquivo no bucket
-          let imagensUrl = item.anexo_imagens_url || null;
+          // Detecta PDF de imagens — exatamente como o original: campo + fallback com underscore
+          let imagensUrl = null;
+          if (item.anexo_imagens_url) {
+            imagensUrl = await getSignedUrl("prontuarios_pdf", item.anexo_imagens_url);
+          }
           if (!imagensUrl) {
-            try {
-              const t = await (window.getSignedUrlIfExists || getSignedUrl)("prontuarios_pdf", item.consulta_id + "-imagens.pdf");
-              if (t) imagensUrl = t;
-            } catch(e) {}
+            // Fallback: tenta {consulta_id}_imagens.pdf (underscore, padrão do sistema)
+            const { data: sd } = await supabaseClient.storage.from("prontuarios_pdf").createSignedUrl(item.consulta_id + "_imagens.pdf", 3600);
+            if (sd?.signedUrl) imagensUrl = sd.signedUrl;
           }
 
           // Detecta áudio
           let audioUrl = null;
           try {
-            const audioName = item.audio_url ? item.audio_url.split('/').pop() : item.consulta_id + ".webm";
-            audioUrl = await getSignedUrl("audios_consultas", audioName);
+            if (item.audio_url) audioUrl = await getSignedUrl("audios_consultas", item.audio_url);
           } catch(e) {}
 
           // Botões de ação
@@ -626,15 +627,14 @@
                 <i class="ph-bold ph-file-text text-xs"></i> Prontuário
                </span>`;
 
-          // Botão 2: Relatório de Imagens
-          // Prioridade: 1) campo no banco, 2) arquivo no bucket pelo padrão esperado
-          let imagensReportUrl = c.anexo_imagens_url || null;
+          // Botão 2: Relatório de Imagens—mesma lógica do original: campo + fallback underscore
+          let imagensReportUrl = null;
+          if (c.anexo_imagens_url) {
+            imagensReportUrl = await getSignedUrl("prontuarios_pdf", c.anexo_imagens_url);
+          }
           if (!imagensReportUrl) {
-            try {
-              // Tenta buscar o arquivo pelo padrão de nome: {consulta_id}-imagens.pdf
-              const tentativa = await (window.getSignedUrlIfExists || getSignedUrl)("prontuarios_pdf", c.consulta_id + "-imagens.pdf");
-              if (tentativa) imagensReportUrl = tentativa;
-            } catch(e) { /* arquivo não existe ainda */ }
+            const { data: sd2 } = await supabaseClient.storage.from("prontuarios_pdf").createSignedUrl(c.consulta_id + "_imagens.pdf", 3600);
+            if (sd2?.signedUrl) imagensReportUrl = sd2.signedUrl;
           }
 
           const btnImagens = imagensReportUrl
