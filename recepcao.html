@@ -301,7 +301,8 @@
             <div class="md:col-span-2 space-y-8">
                 <!-- Fila de Espera -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-5 flex justify-between items-center">
+                    <div class="px-6 py-5">
+                      <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                             <i class="ph-bold ph-users text-indigo-500"></i>
                             Base de Pacientes / Fila
@@ -310,6 +311,34 @@
                             class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
                             <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
                         </button>
+                      </div>
+                      <!-- Search + Filter — Task #18 -->
+                      <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                        <div class="relative flex-1">
+                          <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                          <input id="searchPacienteRecepcao" type="text" placeholder="Buscar por nome ou convênio..."
+                            class="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all"
+                            oninput="filtrarLista()">
+                          <button id="searchClearRecepcao" onclick="limparBusca()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-200 hover:bg-slate-300 rounded-full flex items-center justify-center transition-all">
+                            <i class="ph-bold ph-x text-[10px] text-slate-600"></i>
+                          </button>
+                        </div>
+                        <div class="flex gap-1.5">
+                          <button onclick="setFiltroStatus('todos', this)" data-filtro="todos"
+                            class="filtro-status-btn active px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg bg-indigo-600 text-white border border-indigo-600 whitespace-nowrap transition-all">
+                            Todos
+                          </button>
+                          <button onclick="setFiltroStatus('cadastrado', this)" data-filtro="cadastrado"
+                            class="filtro-status-btn px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg bg-white text-slate-500 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 whitespace-nowrap transition-all">
+                            Ativos
+                          </button>
+                          <button onclick="setFiltroStatus('finalizado', this)" data-filtro="finalizado"
+                            class="filtro-status-btn px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg bg-white text-slate-500 border border-slate-200 hover:border-emerald-300 hover:text-emerald-600 whitespace-nowrap transition-all">
+                            Concluídos
+                          </button>
+                        </div>
+                      </div>
+                      <div id="searchResultCount" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 hidden"></div>
                     </div>
 
                     <ul class="divide-y divide-slate-100" id="listaEspera">
@@ -342,72 +371,235 @@
         </footer>
     </main>
 
-    <!-- Modal Detalhes Paciente -->
-    <div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
-        aria-modal="true" aria-labelledby="modal-nome">
+    <!-- Modal Perfil Completo do Paciente -->
+    <div id="modalDetalhes" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-nome">
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="fecharModal()"></div>
 
-        <!-- Card do Modal -->
-        <div class="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-down"
-            style="background: linear-gradient(135deg, #1e2235 0%, #161927 100%);">
+        <!-- Card do Modal Aberto -->
+        <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-down transform scale-95 opacity-0 transition-all duration-300">
+            <!-- Header do Perfil -->
+            <div class="px-6 py-4 flex items-center gap-4 bg-slate-50 border-b border-slate-100">
+                <div class="w-12 h-12 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center flex-shrink-0">
+                    <i class="ph-bold ph-user text-indigo-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Perfil do Paciente</p>
+                    <h3 class="text-lg font-bold text-slate-800 leading-tight" id="modal-nome">Nome do Paciente</h3>
+                </div>
+                <button onclick="fecharModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
 
-            <!-- Header com avatar e nome -->
-            <div class="px-6 pt-7 pb-5">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
-                        <i class="ph-bold ph-user text-indigo-400 text-2xl"></i>
+            <!-- Corpo Scrollável -->
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-6 flex-1 bg-white">
+                
+                <!-- Info Básica (Top) -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-indigo-50/50 border border-indigo-100/50 p-3 rounded-xl">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Chegada</span>
+                        <span class="text-sm font-semibold text-slate-700" id="modal-chegada">-</span>
                     </div>
-                    <div>
-                        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Detalhes do
-                            Paciente</p>
-                        <h3 class="text-lg font-bold text-white leading-tight" id="modal-nome">Nome do Paciente</h3>
+                    <div class="bg-indigo-50/50 border border-indigo-100/50 p-3 rounded-xl">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Convênio</span>
+                        <span class="text-sm font-semibold text-slate-700" id="modal-convenio">-</span>
                     </div>
-                    <button onclick="fecharModal()"
-                        class="ml-auto p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
-                        <i class="ph-bold ph-x text-lg"></i>
-                    </button>
+                    <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl overflow-hidden">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Paciente ID</span>
+                        <span class="text-xs font-mono text-slate-500 truncate block" id="modal-id" title="ID do Paciente">-</span>
+                    </div>
+                </div>
+
+                <!-- Seção Anamnese -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden mt-4">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                        <h4 class="font-bold text-slate-700 text-sm flex items-center gap-2"><i class="ph-bold ph-clipboard-text text-indigo-500"></i> Anamnese Inicial</h4>
+                        <span id="docSecAnamneseStatus" class="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md tracking-wider">CARREGANDO...</span>
+                    </div>
+                    <div id="docSecAnamneseContent" class="p-4 bg-white text-sm text-slate-600 space-y-3">
+                        <p class="text-center text-xs text-slate-400"><i class="ph ph-spinner animate-spin"></i> Buscando informações...</p>
+                    </div>
+                </div>
+
+                <!-- Seção Termo -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden relative">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between ml-1">
+                        <h4 class="font-bold text-slate-700 text-sm flex items-center gap-2"><i class="ph-bold ph-file-text text-emerald-600"></i> Termo de Consentimento</h4>
+                        <span id="docSecTermoStatus" class="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md tracking-wider">CARREGANDO...</span>
+                    </div>
+                    <div class="p-4 bg-white ml-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <i class="ph-bold ph-calendar-blank"></i>
+                            <span id="docSecTermoData">Carregando dados...</span>
+                        </div>
+                        <button type="button" id="btnReimprimirTermo" onclick="imprimirTermo()" class="hidden px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                            <i class="ph-bold ph-printer"></i> Ver / Imprimir Documento
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Divisor -->
-            <div class="h-px bg-white/5 mx-6"></div>
-
-            <!-- Info -->
-            <div class="px-6 py-5 space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Convênio</span>
-                    <span class="text-sm font-semibold text-slate-200" id="modal-convenio">-</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Chegada</span>
-                    <span class="text-sm font-semibold text-slate-200" id="modal-chegada">-</span>
-                </div>
-                <div class="flex items-start justify-between gap-4">
-                    <span
-                        class="text-xs font-bold text-slate-500 uppercase tracking-wider flex-shrink-0 mt-0.5">ID</span>
-                    <span class="text-xs font-mono text-slate-400 bg-white/5 px-2 py-1 rounded-lg break-all text-right"
-                        id="modal-id">-</span>
-                </div>
-            </div>
-
-            <!-- Divisor -->
-            <div class="h-px bg-white/5 mx-6"></div>
-
-            <!-- Ações -->
-            <div class="px-6 py-5 flex gap-3">
-                <button type="button" onclick="excluirPaciente()"
-                    class="flex items-center gap-2 px-4 py-2.5 bg-rose-500/15 text-rose-400 border border-rose-500/25 hover:bg-rose-500/25 hover:text-rose-300 rounded-xl text-sm font-bold transition-all flex-1 justify-center">
+            <!-- Footer / Ações -->
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3">
+                <button type="button" id="btnExcluirPacienteModal" onclick="excluirPaciente()" class="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl text-sm font-bold transition-all">
                     <i class="ph-bold ph-trash"></i> Excluir
                 </button>
-                <button type="button" onclick="fecharModal()"
-                    class="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all flex-1 justify-center shadow-lg shadow-indigo-500/25">
-                    <i class="ph-bold ph-check"></i> Fechar
+                <div class="flex gap-2">
+                  <button type="button" id="btnEditarPacienteModal" onclick="abrirEdicaoPaciente()" class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-xl text-sm font-bold transition-all">
+                      <i class="ph-bold ph-pencil"></i> Editar
+                  </button>
+                  <button type="button" onclick="fecharModal()" class="flex items-center gap-2 px-6 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition-all shadow-md">
+                      <i class="ph-bold ph-check"></i> Concluir
+                  </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Checklist Anamnese (Rico) -->
+    <div id="modalChecklistAnamnese" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-down">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+                <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                    <i class="ph-bold ph-heartbeat text-indigo-600"></i> Questionário de Saúde Pré-Clínico
+                </h3>
+                <button type="button" onclick="fecharModalAnamnese()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                <!-- Seção 1: Condições Sistêmicas -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2">Condições Sistêmicas e Hábitos</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                            <div class="pt-0.5">
+                                <input type="checkbox" id="chk_doencas_cronicas" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
+                            </div>
+                            <span class="text-sm text-slate-700 font-medium">Doenças Crônicas<br><span class="text-xs text-slate-500 font-normal">(Diabetes, Hipertensão, Hipotireoidismo, etc.)</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                            <div class="pt-0.5">
+                                <input type="checkbox" id="chk_alergias" class="w-4 h-4 text-rose-600 bg-white border-slate-300 rounded focus:ring-rose-500">
+                            </div>
+                            <span class="text-sm text-slate-700 font-medium">Alergias Conhecidas<br><span class="text-xs text-slate-500 font-normal">(Medicamentos, anestésicos, látex, iodo)</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                            <div class="pt-0.5">
+                                <input type="checkbox" id="chk_tabagismo_etilismo" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
+                            </div>
+                            <span class="text-sm text-slate-700 font-medium">Tabagismo / Etilismo<br><span class="text-xs text-slate-500 font-normal">(Uso atual ou pregresso)</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                            <div class="pt-0.5">
+                                <input type="checkbox" id="chk_cicatrizacao" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
+                            </div>
+                            <span class="text-sm text-slate-700 font-medium">Cicatrização Anormal<br><span class="text-xs text-slate-500 font-normal">(Histórico de queloides ou cicatrizes hipertróficas)</span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Seção 2: Detalhamento Descritivo -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2">Detalhamento Clínico</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Uso Contínuo de Medicações</label>
+                            <textarea id="txt_uso_continuo" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Especifique anticoagulantes, imunossupressores, roacutan, vitaminas..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Cirurgias Anteriores / Internações</label>
+                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Informe se houve cirurgias recentes ou problemas anestésicos..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Condições de Pele Prévias</label>
+                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Psoríase, dermatite, rosácea, vitiligo, herpes repetição..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Histórico Familiar Relevante</label>
+                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças genéticas...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onclick="fecharModalAnamnese()" class="px-5 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors">Cancelar</button>
+                <button type="button" onclick="avancarParaTermo()" class="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
+                    Avançar para Termo <i class="ph-bold ph-arrow-right"></i>
                 </button>
             </div>
         </div>
     </div>
+
+    <!-- Modal Termo de Consentimento Gerado -->
+    <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white">
+                <h3 class="text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800">Documento Formal: Termo de Consentimento</h3>
+                <button type="button" onclick="fecharModalTermo()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+            
+            <div id="termo-imprimir" class="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white font-serif text-slate-800 text-sm leading-relaxed" style="max-height: 60vh;">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
+                    <h3 class="font-bold mt-2 uppercase text-slate-700">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
+                </div>
+                
+                <p class="mb-4 text-justify">
+                    Eu, paciente em fase de admissão na <strong>Clínica Cicatrize</strong>, declaro para os devidos fins que fui esclarecido(a) de forma clara e objetiva sobre a natureza dos procedimentos estéticos, dermatológicos ou cirúrgicos a serem realizados.
+                </p>
+                <p class="mb-4 text-justify">
+                    <strong>1. ESCLARECIMENTOS GERAIS:</strong> Compreendo que a medicina não é uma ciência exata e que, apesar de toda técnica, empenho e diligência profissional, resultados exatos não podem ser garantidos. Riscos inerentes, infecções, assimetrias temporárias e processos de cicatrização variam de indivíduo para indivíduo.
+                </p>
+                <p class="mb-4 text-justify">
+                    <strong>2. VERACIDADE DAS INFORMAÇÕES:</strong> Declaro que todas as informações prestadas no Questionário de Saúde Pré-Clínico (Anamnese) são verdadeiras, não omitindo nenhum detalhe sobre alergias, uso de medicamentos, condições crônicas, cirurgias ou histórico de saúde. Entendo que a omissão pode resultar em complicações severas.
+                </p>
+                <p class="mb-4 text-justify">
+                    <strong>3. REGISTRO FOTOGRÁFICO:</strong> Autorizo o registro fotográfico (antes, durante e depois) de forma estritamente confidencial para fins de prontuário médico e acompanhamento da evolução clínica. Estas imagens não serão veiculadas publicamente sem meu consentimento adicional por escrito.
+                </p>
+                <p class="mb-4 text-justify">
+                    <strong>4. DEVERES DO PACIENTE:</strong> Comprometo-me a seguir rigorosamente todas as prescrições médicas, recomendações pré e pós-procedimento, e a comparecer aos retornos agendados, isentando a Clínica Cicatrize e seus profissionais de responsabilidade em caso de negligência de minha parte.
+                </p>
+                
+                <div class="mt-12 mb-8 flex justify-between gap-8 flex-wrap">
+                    <div class="flex-1 min-w-[200px] border-t border-slate-800 pt-2 text-center">
+                        <p class="font-bold">Assinatura do(a) Paciente</p>
+                    </div>
+                    <div class="flex-1 min-w-[200px] border-t border-slate-800 pt-2 text-center">
+                        <p class="font-bold">Clínica Cicatrize</p>
+                        <p class="text-xs text-slate-500">Local e Data</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">
+                    <i class="ph-bold ph-printer"></i> Imprimir Documento
+                </button>
+                
+                <div class="flex items-center gap-4 w-full sm:w-auto">
+                    <label class="flex items-center gap-2 cursor-pointer p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                        <input type="checkbox" id="chk_termo_aceito" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 bg-white">
+                        <span class="text-sm font-bold text-emerald-800 whitespace-nowrap">Paciente concorda e assina virtualmente</span>
+                    </label>
+                    
+                    <button type="button" onclick="confirmarAgendamentoEGerar()" class="px-6 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                        <i class="ph-bold ph-check-circle"></i> Efetivar Cadastro
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Modal de Confirmação Customizado -->
     <div id="modalConfirm" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -570,6 +762,10 @@
         const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
         const WEBHOOK_EXCLUIR = "https://n8n.srv1181762.hstgr.cloud/webhook/delete_paciente";
 
+        // Cache de todos os pacientes para filtro client-side
+        let allPacientesData = [];
+        let filtroStatusAtivo = 'todos';
+
         // Função para carregar a fila
         async function carregarFila() {
             const lista = document.getElementById('listaEspera');
@@ -591,6 +787,7 @@
 
                 // Filtrar nulos/vazios
                 data = data.filter(p => p && p.nome);
+                allPacientesData = data; // Salva cache para filtro
 
                 lista.innerHTML = ''; // Limpa antes de renderizar
 
@@ -628,15 +825,13 @@
                     const li = document.createElement('li');
                     li.className = 'p-4 hover:bg-slate-50 transition-colors border-l-2 border-transparent hover:border-indigo-500 animate-fade-in-down group';
 
-                    const pacienteData = JSON.stringify({ id: p.id, nome: p.nome, convenio: p.convenio || 'Particular', chegada: horaChegada }).replace(/'/g, "&#39;");
-
                     const statusBadge = isFinalizado
                         ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-100">Finalizado</span>`
                         : `<span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-indigo-100">Cadastrado</span>`;
 
                     li.innerHTML = `
                         <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="abrirModal(${pacienteData})">
+                            <div class="flex items-center gap-4 cursor-pointer flex-1 abrir-perfil-btn">
                                 <div class="w-10 h-10 rounded-full ${isFinalizado ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'} flex items-center justify-center font-bold text-sm transition-all">${p.nome.substring(0, 2).toUpperCase()}</div>
                                 <div>
                                     <p class="text-sm font-bold text-slate-900 group-hover:text-indigo-700">${p.nome}</p>
@@ -646,12 +841,23 @@
                                     </div>
                                 </div>
                             </div>
-                            <button onclick="confirmarExclusao('${p.id}', '${p.nome.replace(/'/g, "\\'")}')"
-                                class="ml-2 p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0" title="Excluir paciente">
+                            <button class="ml-2 p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0 btn-excluir-inline" title="Excluir paciente">
                                 <i class="ph-bold ph-trash text-sm"></i>
                             </button>
                         </div>
                     `;
+
+                    // Attach click handler for opening profile (no inline onclick)
+                    li.querySelector('.abrir-perfil-btn').addEventListener('click', () => {
+                        abrirModal({ id: p.id, nome: p.nome, convenio: p.convenio || 'Particular', chegada: horaChegada });
+                    });
+
+                    // Attach click handler for inline delete button
+                    li.querySelector('.btn-excluir-inline').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        confirmarExclusao(p.id, p.nome);
+                    });
+
                     lista.appendChild(li);
                 });
 
@@ -674,27 +880,258 @@
             }
         }
 
+        // ── Task #18: Busca + Filtro Client-Side ──
+        function filtrarLista() {
+            const query = (document.getElementById('searchPacienteRecepcao')?.value || '').trim().toUpperCase();
+            const clearBtn = document.getElementById('searchClearRecepcao');
+            const countEl = document.getElementById('searchResultCount');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !query);
+
+            let filtrados = allPacientesData.filter(p => {
+                const nomeMatch = !query || p.nome.toUpperCase().includes(query);
+                const convenioMatch = !query || (p.convenio || 'Particular').toUpperCase().includes(query);
+                if (!nomeMatch && !convenioMatch) return false;
+                if (filtroStatusAtivo === 'finalizado') return p.status_atendimento === 'finalizado';
+                if (filtroStatusAtivo === 'cadastrado') return p.status_atendimento !== 'finalizado';
+                return true;
+            });
+
+            if (query || filtroStatusAtivo !== 'todos') {
+                countEl.textContent = `${filtrados.length} resultado${filtrados.length !== 1 ? 's' : ''}`;
+                countEl.classList.remove('hidden');
+            } else {
+                countEl.classList.add('hidden');
+            }
+            renderizarListaPacientes(filtrados);
+        }
+
+        function setFiltroStatus(status, btn) {
+            filtroStatusAtivo = status;
+            document.querySelectorAll('.filtro-status-btn').forEach(b => {
+                b.classList.remove('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+                b.classList.add('bg-white', 'text-slate-500', 'border-slate-200');
+            });
+            btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200');
+            btn.classList.add('active', 'bg-indigo-600', 'text-white', 'border-indigo-600');
+            filtrarLista();
+        }
+
+        function limparBusca() {
+            const el = document.getElementById('searchPacienteRecepcao');
+            if (el) { el.value = ''; el.focus(); }
+            document.getElementById('searchClearRecepcao')?.classList.add('hidden');
+            filtrarLista();
+        }
+
+        // ── Task #19: Editar Paciente ──
+        let pacienteEmEdicao = null;
+
+        async function abrirEdicaoPaciente() {
+            if (!pacienteSelecionadoId) return;
+            const pac = allPacientesData.find(p => p.id === pacienteSelecionadoId);
+            if (!pac) return;
+
+            pacienteEmEdicao = pac;
+            fecharModal();
+
+            // Espera fechar animacao e preenche o formulario
+            await new Promise(r => setTimeout(r, 350));
+
+            const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+            f('nome', pac.nome);
+            f('telefone', pac.telefone);
+            f('data_nascimento', pac.data_nascimento ? new Date(pac.data_nascimento).toLocaleDateString('pt-BR') : '');
+            f('cidade', pac.cidade);
+            f('endereco', pac.endereco);
+
+            // Atualiza o convênio no select customizado
+            const convenioInput = document.getElementById('convenio');
+            const convenioContainer = document.getElementById('select-convenio');
+            if (convenioInput && pac.convenio) {
+                convenioInput.value = pac.convenio;
+                const txt = convenioContainer?.querySelector('.selected-text');
+                if (txt) { txt.textContent = pac.convenio; txt.classList.remove('text-slate-400'); }
+            }
+
+            // Muda o botão de submit para Salvar Edição
+            const btnSubmit = document.querySelector('#formCadastro button[type="submit"]');
+            if (btnSubmit) {
+                btnSubmit.textContent = 'Salvar Alterações';
+                btnSubmit.classList.replace('bg-indigo-600', 'bg-amber-500');
+                btnSubmit.classList.replace('hover:bg-indigo-700', 'hover:bg-amber-600');
+            }
+
+            // Scroll para o formulário
+            document.getElementById('nome')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('nome')?.focus();
+            await showCustomAlert('Edite os dados e clique em "Salvar Alterações" para confirmar.', 'Editar Paciente');
+        }
+
+        // ── Extrai lógica de render para ser chamada tanto por carregarFila quanto por filtrarLista ──
+        function renderizarListaPacientes(data) {
+            const lista = document.getElementById('listaEspera');
+            lista.innerHTML = '';
+            if (data.length === 0) {
+                lista.innerHTML = `<li class="p-12 text-center text-slate-400 flex flex-col items-center justify-center h-48 animate-fade-in-down"><div class="bg-slate-50 p-4 rounded-full mb-3"><i class="ph ph-magnifying-glass text-3xl text-slate-300"></i></div><p class="font-medium text-slate-500">Nenhum paciente encontrado</p></li>`;
+                return;
+            }
+            data.forEach(p => {
+                const dataCriacao = p.created_at ? new Date(p.created_at) : new Date();
+                const horaChegada = dataCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const isFinalizado = p.status_atendimento === 'finalizado';
+                const li = document.createElement('li');
+                li.className = 'p-4 hover:bg-slate-50 transition-colors border-l-2 border-transparent hover:border-indigo-500 animate-fade-in-down group';
+                const statusBadge = isFinalizado
+                    ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-100">Finalizado</span>`
+                    : `<span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-indigo-100">Cadastrado</span>`;
+                li.innerHTML = `<div class="flex justify-between items-center"><div class="flex items-center gap-4 cursor-pointer flex-1 abrir-perfil-btn"><div class="w-10 h-10 rounded-full ${isFinalizado ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'} flex items-center justify-center font-bold text-sm transition-all">${p.nome.substring(0, 2).toUpperCase()}</div><div><p class="text-sm font-bold text-slate-900 group-hover:text-indigo-700">${p.nome}</p><div class="flex items-center gap-2 text-xs text-slate-500"><span class="bg-slate-100 px-1.5 py-0.5 rounded">${p.convenio || 'Particular'}</span>${statusBadge}</div></div></div><button class="ml-2 p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0 btn-excluir-inline" title="Excluir paciente"><i class="ph-bold ph-trash text-sm"></i></button></div>`;
+                li.querySelector('.abrir-perfil-btn').addEventListener('click', () => abrirModal({ id: p.id, nome: p.nome, convenio: p.convenio || 'Particular', chegada: horaChegada }));
+                li.querySelector('.btn-excluir-inline').addEventListener('click', (e) => { e.stopPropagation(); confirmarExclusao(p.id, p.nome); });
+                lista.appendChild(li);
+            });
+        }
+
         // === MODAL DETALHES & EXCLUSÃO ===
         let pacienteSelecionadoId = null;
 
-        function abrirModal(paciente) {
+        async function abrirModal(paciente) {
             pacienteSelecionadoId = paciente.id;
             document.getElementById('modal-nome').textContent = paciente.nome;
-            document.getElementById('modal-convenio').textContent = paciente.convenio;
+            document.getElementById('modal-convenio').textContent = paciente.convenio || 'Particular';
             document.getElementById('modal-chegada').textContent = paciente.chegada;
             document.getElementById('modal-id').textContent = paciente.id || 'N/A';
 
             const modal = document.getElementById('modalDetalhes');
             modal.classList.remove('hidden');
             setTimeout(() => {
-                modal.querySelector('div[class*="transform"]').classList.add('scale-100', 'opacity-100');
+                modal.querySelector('.transform').classList.add('scale-100', 'opacity-100');
             }, 10);
+            
+            await carregarPerfilDocumentos(pacienteSelecionadoId);
         }
 
         function fecharModal() {
             const modal = document.getElementById('modalDetalhes');
-            modal.classList.add('hidden');
-            pacienteSelecionadoId = null;
+            modal.querySelector('.transform').classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                pacienteSelecionadoId = null;
+            }, 300);
+        }
+
+        async function carregarPerfilDocumentos(pacId) {
+            const sts = document.getElementById('docSecTermoStatus');
+            const dataTxt = document.getElementById('docSecTermoData');
+            const btnReimprimir = document.getElementById('btnReimprimirTermo');
+            const anaSts = document.getElementById('docSecAnamneseStatus');
+            const anaContent = document.getElementById('docSecAnamneseContent');
+            
+            sts.className = "px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md tracking-wider";
+            sts.textContent = "BUSCANDO...";
+            dataTxt.textContent = "Aguarde...";
+            btnReimprimir.classList.add('hidden');
+            
+            anaSts.className = "px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md tracking-wider";
+            anaSts.textContent = "BUSCANDO...";
+            anaContent.innerHTML = '<p class="text-center text-xs text-slate-400"><i class="ph ph-spinner animate-spin"></i> Buscando informações pré-clínicas...</p>';
+
+            if(!window.supabaseClient) {
+                 sts.textContent = "ERRO BANCO";
+                 anaSts.textContent = "ERRO BANCO";
+                 return;
+            }
+
+            try {
+                const pTermo = window.supabaseClient
+                    .from('cicatrize_termos_consentimento')
+                    .select('aceito, aceito_em')
+                    .eq('paciente_id', pacId)
+                    .order('aceito_em', { ascending: false })
+                    .limit(1)
+                    .single();
+                    
+                const pAnamnese = window.supabaseClient
+                    .from('cicatrize_checklist_anamnese')
+                    .select('*')
+                    .eq('paciente_id', pacId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                const [resTermo, resAnamnese] = await Promise.allSettled([pTermo, pAnamnese]);
+
+                if (resTermo.status === "fulfilled" && !resTermo.value.error && resTermo.value.data) {
+                    const data = resTermo.value.data;
+                    if (data.aceito) {
+                        sts.className = "px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md tracking-wider";
+                        sts.textContent = "ACEITO E ASSINADO";
+                        const d = new Date(data.aceito_em);
+                        dataTxt.textContent = "Assinado em: " + d.toLocaleString('pt-BR');
+                        btnReimprimir.classList.remove('hidden');
+                    } else {
+                        sts.className = "px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-md tracking-wider";
+                        sts.textContent = "RECUSADO / PENDENTE";
+                        dataTxt.textContent = "O paciente não possui aceite formal ativo.";
+                    }
+                } else {
+                    sts.className = "px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-bold rounded-md tracking-wider";
+                    sts.textContent = "NÃO LOCALIZADO";
+                    dataTxt.textContent = "Nenhum termo de consentimento registrado.";
+                }
+
+                if (resAnamnese.status === "fulfilled" && !resAnamnese.value.error && resAnamnese.value.data) {
+                    const ad = resAnamnese.value.data;
+                    anaSts.className = "px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md tracking-wider";
+                    anaSts.textContent = "PREENCHIDO";
+                    
+                    const dtAnamnese = new Date(ad.created_at).toLocaleString('pt-BR');
+                    let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-1">`;
+                    
+                    const booleanField = (label, val) => `
+                        <div class="flex items-center gap-2">
+                            <i class="ph-bold ${val ? 'ph-check-circle text-emerald-500' : 'ph-x text-slate-300'}"></i>
+                            <span class="${val ? 'font-medium text-slate-700' : 'text-slate-400'}">${label}: ${val ? 'Sim' : 'Não'}</span>
+                        </div>
+                    `;
+                    
+                    html += `<div class="space-y-2">`;
+                    html += `<p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-3">Condições Sis.</p>`;
+                    html += booleanField("Doenças Crônicas", ad.has_doencas_cronicas);
+                    html += booleanField("Alergia Conhecida", ad.has_alergia);
+                    html += booleanField("Marcapasso", ad.has_marcapasso);
+                    html += booleanField("Ferida em Membro Inf.", ad.has_ferida_mmii);
+                    html += `</div>`;
+                    
+                    html += `<div class="space-y-2">`;
+                    html += `<p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-3">Histórico & Hábitos</p>`;
+                    html += booleanField("Cirurgia Recente (<30d)", ad.has_cirurgia_recente);
+                    html += booleanField("Uso de Anticoagulante", ad.has_anticoagulante);
+                    html += booleanField("Histórico Oncológico", ad.has_historico_oncologico);
+                    html += booleanField("Gestante/Lactante", ad.is_gestante);
+                    html += `</div></div>`;
+                    
+                    if (ad.observacoes && ad.observacoes.trim() !== '') {
+                        html += `
+                        <div class="mt-5 pt-4 border-t border-slate-100">
+                            <p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-2">Observações Adicionais</p>
+                            <p class="text-sm text-slate-600 bg-slate-50/50 p-3 rounded-lg border border-slate-100 leading-relaxed">${ad.observacoes.replace(/\n/g, '<br>')}</p>
+                        </div>`;
+                    }
+                    html += `<div class="mt-4 pt-2 text-[10px] text-right text-slate-400 font-medium">Cadastrado no sistema em: ${dtAnamnese}</div>`;
+                    
+                    anaContent.innerHTML = html;
+                } else {
+                    anaSts.className = "px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-md tracking-wider";
+                    anaSts.textContent = "INCOMPLETO";
+                    anaContent.innerHTML = '<div class="flex items-center gap-2 text-sm text-amber-600 p-2"><i class="ph-bold ph-warning-circle text-lg"></i> A triagem pré-clínica não foi gravada para este paciente.</div>';
+                }
+
+            } catch(e) {
+                console.error("Erro carrega perfil:", e);
+                sts.textContent = "FALHA";
+                anaSts.textContent = "FALHA";
+                anaContent.innerHTML = '<p class="text-red-500 text-sm">Falha ao buscar os dados do servidor.</p>';
+            }
         }
 
         // === DIALOGS CUSTOMIZADOS ===
@@ -751,10 +1188,13 @@
             const confirmed = await showCustomConfirm("Deseja realmente excluir este paciente? Esta ação não pode ser desfeita.", "Excluir Paciente");
             if (!confirmed) return;
 
-            const modalBtn = document.querySelector('#modalDetalhes button.bg-rose-500\\/15');
-            const originalText = modalBtn.innerHTML;
-            modalBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
-            modalBtn.disabled = true;
+            const modalBtn = document.getElementById('btnExcluirPacienteModal');
+            let originalText = '';
+            if (modalBtn) {
+                originalText = modalBtn.innerHTML;
+                modalBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Excluindo...';
+                modalBtn.disabled = true;
+            }
 
             try {
                 const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
@@ -775,8 +1215,10 @@
                 console.error(e);
                 showCustomAlert("Erro ao excluir paciente. Verifique sua conexão.", "Erro");
             } finally {
-                modalBtn.innerHTML = originalText;
-                modalBtn.disabled = false;
+                if (modalBtn) {
+                    modalBtn.innerHTML = originalText;
+                    modalBtn.disabled = false;
+                }
             }
         }
 
@@ -814,98 +1256,150 @@
         // Atualizar fila a cada 30s
         setInterval(carregarFila, 30000);
 
-        document.getElementById('formCadastro').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const statusDiv = document.getElementById('statusCadastro');
+        let dadosCadastroTemporario = null;
+        let submitEventTarget = null;
+        
+        function fecharModalAnamnese() {
+            document.getElementById('modalChecklistAnamnese').classList.add('hidden');
+            dadosCadastroTemporario = null;
+            submitEventTarget = null;
+            document.getElementById('chk_doencas_cronicas').checked = false;
+            document.getElementById('chk_alergias').checked = false;
+            document.getElementById('chk_tabagismo_etilismo').checked = false;
+            document.getElementById('chk_cicatrizacao').checked = false;
+            document.getElementById('txt_uso_continuo').value = '';
+            document.getElementById('txt_cirurgias').value = '';
+            document.getElementById('txt_pele').value = '';
+            document.getElementById('txt_historico_familiar').value = '';
+            document.getElementById('chk_termo_aceito').checked = false;
+        }
 
-            // Coletar dados
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+        function avancarParaTermo() {
+            document.getElementById('modalChecklistAnamnese').classList.add('hidden');
+            document.getElementById('modalTermoConsentimento').classList.remove('hidden');
+        }
 
-            // Validar campos obrigatórios (extra backup)
-            if (!data.nome || !data.data_nascimento || !data.telefone) {
-                statusDiv.textContent = "⚠️ Preencha os campos obrigatórios (*)";
-                statusDiv.className = "status-message error";
+        function fecharModalTermo() {
+            document.getElementById('modalTermoConsentimento').classList.add('hidden');
+            // Retorna ao estado de Anamnese se quiser cancelar totalmente
+            fecharModalAnamnese();
+        }
+
+        function imprimirTermo() {
+            const content = document.getElementById('termo-imprimir').innerHTML;
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            iframe.contentWindow.document.open();
+            iframe.contentWindow.document.write('<html><head><title>Termo de Consentimento - Clínica Cicatrize</title>');
+            iframe.contentWindow.document.write('<link href="https://cdn.tailwindcss.com" rel="stylesheet">');
+            iframe.contentWindow.document.write('</head><body style="padding: 40px; font-family: serif; color: black; background: white;">');
+            iframe.contentWindow.document.write(content);
+            iframe.contentWindow.document.write('</body></html>');
+            iframe.contentWindow.document.close();
+            
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                setTimeout(() => document.body.removeChild(iframe), 2000);
+            }, 600);
+        }
+
+        async function confirmarAgendamentoEGerar() {
+            if (!dadosCadastroTemporario) return;
+            
+            const termoAceito = document.getElementById('chk_termo_aceito').checked;
+            if (!termoAceito) {
+                showCustomAlert("O aceite do Termo de Consentimento (físico ou digital) é obrigatório.", "Atenção");
                 return;
             }
+            
+            const payloadAnamnese = {
+                has_doencas_cronicas: document.getElementById('chk_doencas_cronicas').checked,
+                has_alergias: document.getElementById('chk_alergias').checked,
+                tabagismo_etilismo: document.getElementById('chk_tabagismo_etilismo').checked,
+                historico_cicatrizacao_anormal: document.getElementById('chk_cicatrizacao').checked,
+                uso_continuo: document.getElementById('txt_uso_continuo').value,
+                cirurgias_anteriores: document.getElementById('txt_cirurgias').value,
+                condicoes_pele: document.getElementById('txt_pele').value,
+                historico_familiar: document.getElementById('txt_historico_familiar').value,
+                ambiente: 'cicatrize'
+            };
 
-            // Fallback for Convenio if nothing was selected
-            if (!data.convenio || data.convenio.trim() === '') {
-                data.convenio = 'Particular';
-            }
-
-            statusDiv.textContent = "⏳ Enviando para o sistema...";
+            const data = dadosCadastroTemporario;
+            const eTarget = submitEventTarget;
+            
+            document.getElementById('modalTermoConsentimento').classList.add('hidden');
+            const statusDiv = document.getElementById('statusCadastro');
+            
+            statusDiv.textContent = "⏳ Enviando e registrando dados...";
             statusDiv.className = "status-message loading";
 
-            // CORREÇÃO DE DATA: Converter DD/MM/AAAA para AAAA-MM-DD
-            if (data.data_nascimento && data.data_nascimento.includes('/')) {
-                const parts = data.data_nascimento.split('/');
-                if (parts.length === 3) {
-                    data.data_nascimento = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                }
-            }
-
-            // === MEDICO_ID ===  
-            // Tenta: 1) FormData hidden, 2) getMedicoId(), 3) localStorage direto
-            if (!data.medico_id || data.medico_id.trim() === '') {
-                const mid = window.getMedicoId ? window.getMedicoId() : null;
-                if (mid) {
-                    data.medico_id = mid;
-                } else {
-                    // Última tentativa: ler direto do localStorage
-                    try {
-                        const raw = localStorage.getItem('medico_ativo');
-                        if (raw) data.medico_id = JSON.parse(raw).id;
-                    } catch(e) {}
-                }
-            }
-            if (!data.medico_id || data.medico_id.trim() === '') {
-                statusDiv.textContent = "❌ Médico não identificado. Faça logout e login novamente.";
-                statusDiv.className = "status-message error";
-                return;
-            }
-
             try {
-                // Converter para Query Params (já que o webhook é GET)
                 const params = new URLSearchParams(data).toString();
                 const url = `${WEBHOOK_CADASTRO}?${params}`;
 
                 const authHeaders = window.getAuthHeaders ? await window.getAuthHeaders() : {};
                 const response = await fetch(url, {
-                    method: 'GET', // Webhook configurado como GET
-                    headers: { 
-                        'Accept': 'application/json',
-                        ...authHeaders
-                    }
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json', ...authHeaders }
                 });
 
                 const responseText = await response.text();
-
-                if (!response.ok) {
-                    throw new Error(`Erro Servidor: ${response.status} - ${responseText}`);
-                }
+                if (!response.ok) throw new Error(`Erro Servidor: ${response.status} - ${responseText}`);
 
                 let result;
-                try {
-                    result = JSON.parse(responseText);
-                } catch (e) {
-                    throw new Error(`Resposta não é JSON válido: ${responseText.substring(0, 50)}...`);
-                }
+                try { result = JSON.parse(responseText); } catch (e) { throw new Error(`Resposta não é JSON válido: ${responseText.substring(0, 50)}...`); }
 
                 if (result) {
+                    let pacienteId = result.id || result.paciente_id;
+                    if (!pacienteId && window.supabaseClient) {
+                         const { data: fetchPac } = await window.supabaseClient
+                            .from('pacientes')
+                            .select('id')
+                            .eq('nome', data.nome)
+                            .eq('telefone', data.telefone)
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                            .single();
+                         if (fetchPac) pacienteId = fetchPac.id;
+                    }
+
+                    if (pacienteId && window.supabaseClient) {
+                        try {
+                            const usrId = (await window.supabaseClient.auth.getUser()).data?.user?.id;
+                            
+                            payloadAnamnese.paciente_id = pacienteId;
+                            payloadAnamnese.created_by = usrId;
+                            console.log('Inserindo Anamnese:', payloadAnamnese);
+                            let res1 = await window.supabaseClient.from('cicatrize_checklist_anamnese').insert(payloadAnamnese);
+                            if (res1.error) throw new Error("Erro Anamnese: " + JSON.stringify(res1.error));
+                            
+                            console.log('Inserindo Termo:', { paciente_id: pacienteId, aceito: termoAceito, usuario_registro: usrId });
+                            let res2 = await window.supabaseClient.from('cicatrize_termos_consentimento').insert({
+                                paciente_id: pacienteId,
+                                aceito: termoAceito,
+                                usuario_registro: usrId,
+                                ambiente: 'cicatrize'
+                            });
+                            if (res2.error) throw new Error("Erro Termo: " + JSON.stringify(res2.error));
+                            
+                        } catch (errSupabase) {
+                            console.error("Erro CRÍTICO ao inserir dados da Cicatrize:", errSupabase);
+                            showCustomAlert("O paciente foi criado, mas houve uma falha ao salvar a Anamnese/Termos. Por favor, tente editar o perfil depois.", "Aviso");
+                        }
+                    }
+
                     statusDiv.textContent = "✅ Paciente cadastrado com sucesso!";
                     statusDiv.className = "status-message success";
-                    e.target.reset();
+                    if (eTarget) eTarget.reset();
 
-                    // Reset visual selects
                     document.querySelectorAll('.selected-text').forEach(s => {
                         s.textContent = 'Selecione';
                         s.classList.add('text-slate-400');
                     });
-
-                    // Recarregar lista para confirmar que foi pro banco
+                    
                     carregarFila();
-
                 } else {
                     throw new Error('Erro na resposta do servidor');
                 }
@@ -921,6 +1415,50 @@
                     statusDiv.className = "";
                 }
             }, 5000);
+            
+            fecharModalAnamnese(); // Limpa variaveis temporarias
+        }
+
+        document.getElementById('formCadastro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('statusCadastro');
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            if (!data.nome || !data.data_nascimento || !data.telefone) {
+                statusDiv.textContent = "⚠️ Preencha os campos obrigatórios (*)";
+                statusDiv.className = "status-message error";
+                return;
+            }
+
+            if (!data.convenio || data.convenio.trim() === '') data.convenio = 'Particular';
+
+            if (data.data_nascimento && data.data_nascimento.includes('/')) {
+                const parts = data.data_nascimento.split('/');
+                if (parts.length === 3) data.data_nascimento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            if (!data.medico_id || data.medico_id.trim() === '') {
+                const mid = window.getMedicoId ? window.getMedicoId() : null;
+                if (mid) data.medico_id = mid;
+                else {
+                    try {
+                        const raw = localStorage.getItem('medico_ativo');
+                        if (raw) data.medico_id = JSON.parse(raw).id;
+                    } catch(err) {}
+                }
+            }
+            if (!data.medico_id || data.medico_id.trim() === '') {
+                statusDiv.textContent = "❌ Médico não identificado. Faça logout e login novamente.";
+                statusDiv.className = "status-message error";
+                return;
+            }
+
+            // Exibe modal customizado de Anamnese da Cicatrize antes de finalizar
+            dadosCadastroTemporario = data;
+            submitEventTarget = e.target;
+            document.getElementById('modalChecklistAnamnese').classList.remove('hidden');
         });
     </script>
 </body>
