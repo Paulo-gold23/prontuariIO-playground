@@ -604,7 +604,7 @@
             }
 
             // Segundo: buscar thumbnails individuais das imagens do paciente desta consulta
-            const imgApiUrl = \`https://n8n.srv1181762.hstgr.cloud/webhook/listarImagensPaciente?paciente_id=\${encodeURIComponent(id)}\`;
+            const imgApiUrl = `https://n8n.srv1181762.hstgr.cloud/webhook/listarImagensPaciente?paciente_id=${encodeURIComponent(id)}`;
             const authHeaders = typeof window.getAuthHeaders === 'function' ? await window.getAuthHeaders() : {};
             const imgRes = await fetch(imgApiUrl, { headers: { ...authHeaders } });
             if (imgRes.ok) {
