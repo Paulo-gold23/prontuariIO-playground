@@ -514,19 +514,44 @@
           const dataC = new Date(item.data_hora);
           const dataFmt = dataC.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
           const pdfUrl = await getSignedUrl("prontuarios_pdf", item.consulta_id + ".pdf");
-          
-          let cardAudioHtml = "";
+
+          // Detecta PDF de imagens: 1) campo do banco, 2) arquivo no bucket
+          let imagensUrl = item.anexo_imagens_url || null;
+          if (!imagensUrl) {
+            try {
+              const t = await getSignedUrl("prontuarios_pdf", item.consulta_id + "-imagens.pdf");
+              if (t) imagensUrl = t;
+            } catch(e) {}
+          }
+
+          // Detecta áudio
+          let audioUrl = null;
           try {
             const audioName = item.audio_url ? item.audio_url.split('/').pop() : item.consulta_id + ".webm";
-            const audioUrl = await getSignedUrl("audios_consultas", audioName);
-            if (audioUrl) {
-              cardAudioHtml = `
-                <div class="mt-2 mb-4 w-full">
-                  <audio controls controlsList="nodownload" src="${audioUrl}" class="h-6 w-full opacity-60 hover:opacity-100 transition-all rounded-full bg-slate-50 border border-slate-100"></audio>
-                </div>
-              `;
-            }
-          } catch(e) { console.error("Erro ao carregar áudio:", e); }
+            audioUrl = await getSignedUrl("audios_consultas", audioName);
+          } catch(e) {}
+
+          // Botões de ação
+          const btnLaudo = pdfUrl
+            ? `<a href="${pdfUrl}" target="_blank"
+                 class="flex items-center gap-1 px-3 py-2 bg-slate-900 text-white text-[9px] font-black rounded-lg hover:bg-emerald-600 transition-all uppercase tracking-wider">
+                <i class="ph-bold ph-file-text text-xs"></i> Ver Laudo
+               </a>`
+            : '';
+
+          const btnImagens = imagensUrl
+            ? `<a href="${imagensUrl}" target="_blank"
+                 class="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-[9px] font-black rounded-lg hover:bg-indigo-700 transition-all uppercase tracking-wider shadow-sm">
+                <i class="ph-bold ph-images text-xs"></i> Imagens
+               </a>`
+            : '';
+
+          const btnVoz = audioUrl
+            ? `<a href="${audioUrl}" target="_blank"
+                 class="flex items-center gap-1 px-3 py-2 bg-violet-600 text-white text-[9px] font-black rounded-lg hover:bg-violet-700 transition-all uppercase tracking-wider shadow-sm">
+                <i class="ph-bold ph-microphone text-xs"></i> Voz
+               </a>`
+            : '';
 
           const card = document.createElement("div");
           card.className = "bg-white p-5 rounded-3xl border border-slate-100 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 animate-in group flex flex-col justify-between";
@@ -540,9 +565,10 @@
               </div>
               <h5 class="font-extrabold text-slate-900 text-sm mb-4 line-clamp-1">${item.paciente_nome}</h5>
             </div>
-            <div class="mt-auto">
-              ${cardAudioHtml}
-              <a href="${pdfUrl || '#'}" target="_blank" class="w-full py-2 bg-slate-900 text-white text-[10px] font-black rounded-xl hover:bg-emerald-600 transition-all uppercase tracking-widest text-center inline-block">Ver Laudo</a>
+            <div class="mt-auto flex flex-wrap gap-1.5">
+              ${btnLaudo}
+              ${btnImagens}
+              ${btnVoz}
             </div>
           `;
           container.appendChild(card);
