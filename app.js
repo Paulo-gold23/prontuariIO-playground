@@ -548,6 +548,48 @@ if (btnConfirmarAssinatura) {
                     result = { success: true };
                 }
 
+                try {
+                    // Etapa 2: Assinatura Dupla (Gravar hash, IP)
+                    let ipOrigem = "0.0.0.0";
+                    try {
+                        const ipReq = await fetch('https://api.ipify.org?format=json');
+                        const ipData = await ipReq.json();
+                        if (ipData && ipData.ip) ipOrigem = ipData.ip;
+                    } catch (e) {}
+
+                    const medicoIdAtivo = await garantirMedicoId();
+                    const textoParaHash = payload.consulta_id + payload.conteudo_medico.diagnostico + payload.conteudo_medico.tratamento + new Date().getTime();
+                    const msgBuffer = new TextEncoder().encode(textoParaHash);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                    if (window.supabaseClient) {
+                        const { error: errAssinatura } = await window.supabaseClient.from('cicatrize_prontuario_assinaturas').insert({
+                            consulta_id: payload.consulta_id,
+                            medico_id: medicoIdAtivo,
+                            hash_documento: hashHex,
+                            ip_assinatura: ipOrigem,
+                            ambiente: 'cicatrize'
+                        });
+                        
+                        if (errAssinatura && errAssinatura.code !== '23505') {
+                            console.error('Falha ao registrar assinatura de bloqueio', errAssinatura);
+                        }
+
+                        // Auditoria da Assinatura
+                        await window.supabaseClient.from('cicatrize_auditoria_logs').insert({
+                            tipo_evento: 'PRONTUARIO_ASSINADO',
+                            referencia_id: payload.consulta_id,
+                            gerado_por: medicoIdAtivo,
+                            ip_origem: ipOrigem,
+                            metadata: { hash: hashHex }
+                        });
+                    }
+                } catch (eAssinatura) {
+                    console.error("Erro na lógica de Fase 3 (Assinatura):", eAssinatura);
+                }
+
                 document.getElementById('resultadoProntuario').classList.add('hidden');
                 document.getElementById('conclusaoAtendimento').classList.remove('hidden');
 
@@ -565,6 +607,48 @@ if (btnConfirmarAssinatura) {
                         }
                     };
                 }
+
+                // --------- INÍCIO: INTEGRAÇÃO FASE 4 (TESTE GOTENBERG) ---------
+                const btnTesteGotenberg = document.getElementById('btnTesteGotenberg');
+                if (btnTesteGotenberg) {
+                    btnTesteGotenberg.onclick = async (e) => {
+                        e.preventDefault();
+                        const oldHtml = btnTesteGotenberg.innerHTML;
+                        btnTesteGotenberg.innerHTML = '<div class="loader-7" style="margin-right:8px"><div class="square"></div></div> Gerando...';
+                        btnTesteGotenberg.disabled = true;
+                        
+                        try {
+                            // Envia o payload para o novo fluxo webhook n8n de teste com template Gotenberg
+                            const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/teste-gotenberg-cicatrize-v2", {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    paciente_nome: document.getElementById('pacienteNome').innerText,
+                                    medico_nome: document.getElementById('medicoNome').innerText.replace("Dr. ", ""),
+                                    hda: payload.conteudo_medico.hda,
+                                    exame_fisico: payload.conteudo_medico.exame_fisico,
+                                    diagnostico: payload.conteudo_medico.diagnostico,
+                                    tratamento: payload.conteudo_medico.tratamento,
+                                    hash_assinatura: "Gerado digitalmente via Sistema" // Hash real está no Supabase guardado
+                                })
+                            });
+                            
+                            if(!resp.ok) throw new Error("Erro na API de PDF");
+                            
+                            const blob = await resp.blob();
+                            const blobUrl = window.URL.createObjectURL(blob);
+                            window.open(blobUrl, '_blank');
+                            showToast("PDF de teste gerado com sucesso!", "success");
+                        } catch (errPDF) {
+                            console.error(errPDF);
+                            showToast("Falha ao gerar o PDF de teste (Gotenberg).", "error");
+                        } finally {
+                            btnTesteGotenberg.innerHTML = oldHtml;
+                            btnTesteGotenberg.disabled = false;
+                        }
+                    };
+                }
+                // --------- FIM: INTEGRAÇÃO FASE 4 (TESTE GOTENBERG) ---------
 
                 // Atualizar badge
                 const badge = document.getElementById('pacienteStatus');
