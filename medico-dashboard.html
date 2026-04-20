@@ -600,9 +600,19 @@
                 <i class="ph-bold ph-file-text text-xs"></i> Prontuário
                </span>`;
 
-          // Botão 2: Relatório de Imagens — link se já existe, gerar se não existe
-          const btnImagens = c.anexo_imagens_url
-            ? `<a href="${c.anexo_imagens_url}" target="_blank"
+          // Botão 2: Relatório de Imagens
+          // Prioridade: 1) campo no banco, 2) arquivo no bucket pelo padrão esperado
+          let imagensReportUrl = c.anexo_imagens_url || null;
+          if (!imagensReportUrl) {
+            try {
+              // Tenta buscar o arquivo pelo padrão de nome: {consulta_id}-imagens.pdf
+              const tentativa = await getSignedUrl("prontuarios_pdf", c.consulta_id + "-imagens.pdf");
+              if (tentativa) imagensReportUrl = tentativa;
+            } catch(e) { /* arquivo não existe ainda */ }
+          }
+
+          const btnImagens = imagensReportUrl
+            ? `<a href="${imagensReportUrl}" target="_blank"
                  class="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white text-[9px] font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-wider shadow-sm shadow-emerald-200">
                 <i class="ph-bold ph-images text-xs"></i> Imagens
                </a>`
@@ -611,6 +621,7 @@
                  class="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 text-[9px] font-black rounded-lg hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-wider border border-emerald-200">
                 <i class="ph-bold ph-images text-xs"></i> Imagens
                </button>`;
+
 
           // Botão 3: Merge (PDF combinado) — sempre acessível via geração
           const mergeUrl = `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/${c.consulta_id}-merge.pdf`;
