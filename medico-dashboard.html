@@ -519,7 +519,7 @@
           let imagensUrl = item.anexo_imagens_url || null;
           if (!imagensUrl) {
             try {
-              const t = await getSignedUrl("prontuarios_pdf", item.consulta_id + "-imagens.pdf");
+              const t = await (window.getSignedUrlIfExists || getSignedUrl)("prontuarios_pdf", item.consulta_id + "-imagens.pdf");
               if (t) imagensUrl = t;
             } catch(e) {}
           }
@@ -632,7 +632,7 @@
           if (!imagensReportUrl) {
             try {
               // Tenta buscar o arquivo pelo padrão de nome: {consulta_id}-imagens.pdf
-              const tentativa = await getSignedUrl("prontuarios_pdf", c.consulta_id + "-imagens.pdf");
+              const tentativa = await (window.getSignedUrlIfExists || getSignedUrl)("prontuarios_pdf", c.consulta_id + "-imagens.pdf");
               if (tentativa) imagensReportUrl = tentativa;
             } catch(e) { /* arquivo não existe ainda */ }
           }

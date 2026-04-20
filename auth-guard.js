@@ -105,7 +105,8 @@ async function fetchMedicoData(userId) {
 }
 
 /**
- * Gera uma URL assinada temporária para arquivos privados
+ * Gera uma URL assinada temporária para arquivos privados no bucket Supabase.
+ * Retorna null se o arquivo não existir ou houver erro.
  */
 async function getSignedUrl(bucket, path) {
     if (!supabaseClient) return null;
@@ -123,6 +124,38 @@ async function getSignedUrl(bucket, path) {
         return null;
     }
 }
+
+/**
+ * Verifica se um arquivo EXISTE no bucket e retorna URL assinada somente se existir.
+ * Usa storage.list() para checar — mais confiável que createSignedUrl (que retorna URL mesmo sem arquivo).
+ */
+async function getSignedUrlIfExists(bucket, path) {
+    if (!supabaseClient) return null;
+    try {
+        const fileName = path.includes('/') ? path.split('/').pop() : path;
+
+        // Verifica existência via list (busca exata pelo nome)
+        const { data: listData, error: listError } = await supabaseClient
+            .storage
+            .from(bucket)
+            .list('', { search: fileName, limit: 1 });
+
+        if (listError || !listData || listData.length === 0) return null;
+
+        // Arquivo existe — gera URL assinada
+        const { data, error } = await supabaseClient
+            .storage
+            .from(bucket)
+            .createSignedUrl(fileName, 300);
+
+        if (error) throw error;
+        return data.signedUrl;
+    } catch (err) {
+        // Silencioso — arquivo simplesmente não existe ainda
+        return null;
+    }
+}
+window.getSignedUrlIfExists = getSignedUrlIfExists;
 
 /**
  * Retorna os headers de autenticação com o token JWT atual do Supabase
