@@ -79,7 +79,7 @@ async function fetchMedicoData(userId) {
     try {
         const { data, error } = await supabaseClient
             .from('medicos')
-            .select('id, nome, crm, especialidade, auth_user_id')
+            .select('id, nome, crm, especialidade, auth_user_id, tipo_clinica')
             .eq('auth_user_id', userId)
             .single();
 
@@ -87,7 +87,7 @@ async function fetchMedicoData(userId) {
             console.warn('Não encontrou médico pelo auth_user_id, tentando pelo id:', error.message);
             const { data: data2, error: error2 } = await supabaseClient
                 .from('medicos')
-                .select('id, nome, crm, especialidade')
+                .select('id, nome, crm, especialidade, tipo_clinica')
                 .eq('id', userId)
                 .single();
             

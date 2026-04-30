@@ -152,7 +152,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 
             <!-- Coluna 1: Cadastro Completo -->
-            <div class="md:col-span-1">
+            <div class="md:col-span-1 relative z-30">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24">
                     <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <i class="ph-fill ph-plus-circle text-indigo-600"></i> Novo Paciente
@@ -374,7 +374,7 @@
     <!-- Modal Perfil Completo do Paciente -->
     <div id="modalDetalhes" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-nome">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="fecharModal()"></div>
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm" onclick="fecharModal()"></div>
 
         <!-- Card do Modal Aberto -->
         <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-down transform scale-95 opacity-0 transition-all duration-300">
@@ -459,8 +459,8 @@
     </div>
 
     <!-- Modal Checklist Anamnese (Rico) -->
-    <div id="modalChecklistAnamnese" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+    <div id="modalChecklistAnamnese" role="dialog" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-down">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
                 <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
@@ -474,54 +474,123 @@
             <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 <!-- Seção 1: Condições Sistêmicas -->
                 <div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2">Condições Sistêmicas e Hábitos</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                            <div class="pt-0.5">
-                                <input type="checkbox" id="chk_doencas_cronicas" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
-                            </div>
-                            <span class="text-sm text-slate-700 font-medium">Doenças Crônicas<br><span class="text-xs text-slate-500 font-normal">(Diabetes, Hipertensão, Hipotireoidismo, etc.)</span></span>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2 flex items-center gap-2"><i class="ph-bold ph-heart text-rose-500"></i> Condições Sistêmicas</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_diabetes" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Diabetes<br><span class="text-xs text-slate-500 font-normal">Tipo 1, Tipo 2 ou gestacional</span></span>
                         </label>
-                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                            <div class="pt-0.5">
-                                <input type="checkbox" id="chk_alergias" class="w-4 h-4 text-rose-600 bg-white border-slate-300 rounded focus:ring-rose-500">
-                            </div>
-                            <span class="text-sm text-slate-700 font-medium">Alergias Conhecidas<br><span class="text-xs text-slate-500 font-normal">(Medicamentos, anestésicos, látex, iodo)</span></span>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_hipertensao" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Hipertensão Arterial<br><span class="text-xs text-slate-500 font-normal">Pressão alta controlada ou não</span></span>
                         </label>
-                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                            <div class="pt-0.5">
-                                <input type="checkbox" id="chk_tabagismo_etilismo" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
-                            </div>
-                            <span class="text-sm text-slate-700 font-medium">Tabagismo / Etilismo<br><span class="text-xs text-slate-500 font-normal">(Uso atual ou pregresso)</span></span>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_hipotireoidismo" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Hipotireoidismo<br><span class="text-xs text-slate-500 font-normal">Disfunção tireoidiana em tratamento</span></span>
                         </label>
-                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                            <div class="pt-0.5">
-                                <input type="checkbox" id="chk_cicatrizacao" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500">
-                            </div>
-                            <span class="text-sm text-slate-700 font-medium">Cicatrização Anormal<br><span class="text-xs text-slate-500 font-normal">(Histórico de queloides ou cicatrizes hipertróficas)</span></span>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_doencas_cronicas" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Outras Doenças Crônicas<br><span class="text-xs text-slate-500 font-normal">Cardiopatia, insuficiência renal, etc.</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_marcapasso" class="w-4 h-4 text-amber-600 bg-white border-slate-300 rounded focus:ring-amber-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Marcapasso / Implante Metálico<br><span class="text-xs text-slate-500 font-normal">Contraindicação para equipamentos eletromagnéticos</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_imunossupressao" class="w-4 h-4 text-amber-600 bg-white border-slate-300 rounded focus:ring-amber-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Imunossupressão<br><span class="text-xs text-slate-500 font-normal">Quimioterapia, corticoides, transplantado</span></span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Seção 2: Detalhamento Descritivo -->
+                <!-- Seção 2: Alergias & Riscos -->
                 <div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2">Detalhamento Clínico</h4>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2 flex items-center gap-2"><i class="ph-bold ph-warning text-amber-500"></i> Alergias & Fatores de Risco</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="flex items-start gap-3 p-3 bg-rose-50 border border-rose-100 rounded-xl cursor-pointer hover:bg-rose-100 hover:border-rose-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_alergias" class="w-4 h-4 text-rose-600 bg-white border-slate-300 rounded focus:ring-rose-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Alergias Conhecidas<br><span class="text-xs text-slate-500 font-normal">Medicamentos, anestésicos, látex, iodo</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-rose-50 border border-rose-100 rounded-xl cursor-pointer hover:bg-rose-100 hover:border-rose-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_disturbio_coagulacao" class="w-4 h-4 text-rose-600 bg-white border-slate-300 rounded focus:ring-rose-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Distúrbio de Coagulação<br><span class="text-xs text-slate-500 font-normal">Hemofilia, uso de anticoagulantes (Marevan, Xarelto)</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_tabagismo_etilismo" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Tabagismo / Etilismo<br><span class="text-xs text-slate-500 font-normal">Uso atual ou pregresso</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_gestante" class="w-4 h-4 text-pink-600 bg-white border-slate-300 rounded focus:ring-pink-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Gestante / Lactante<br><span class="text-xs text-slate-500 font-normal">Contraindicação para diversos procedimentos</span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Seção 3: Histórico Dermatológico/Cirúrgico -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2 flex items-center gap-2"><i class="ph-bold ph-bandaids text-emerald-500"></i> Histórico Dermatológico & Cirúrgico</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_cicatrizacao" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Cicatrização Anormal<br><span class="text-xs text-slate-500 font-normal">Queloides ou cicatrizes hipertróficas</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_cirurgia_recente" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Cirurgia Recente (&lt;30 dias)<br><span class="text-xs text-slate-500 font-normal">Procedimento cirúrgico no último mês</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_herpes" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Herpes Recorrente<br><span class="text-xs text-slate-500 font-normal">Labial ou genital com recidivas frequentes</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_historico_oncologico" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Histórico Oncológico<br><span class="text-xs text-slate-500 font-normal">Câncer de pele ou outros neoplasias</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_ferida_mmii" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Ferida em Membro Inferior<br><span class="text-xs text-slate-500 font-normal">Úlcera venosa, arterial ou neuropática</span></span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors">
+                            <div class="pt-0.5"><input type="checkbox" id="chk_pele_sensivel" class="w-4 h-4 text-indigo-600 bg-white border-slate-300 rounded focus:ring-indigo-500"></div>
+                            <span class="text-sm text-slate-700 font-medium">Pele Sensível / Reativa<br><span class="text-xs text-slate-500 font-normal">Rosácea, dermatite de contato, fotossensibilidade</span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Seção 4: Detalhamento Clínico -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide border-b pb-2 flex items-center gap-2"><i class="ph-bold ph-note-pencil text-indigo-500"></i> Detalhamento Clínico</h4>
                     <div class="space-y-4">
                         <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Tipo de Pele (Fitzpatrick)</label>
+                            <div class="flex flex-wrap gap-2" id="tipo_pele_group">
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="I" class="hidden"> I - Muito clara</label>
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="II" class="hidden"> II - Clara</label>
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="III" class="hidden"> III - Morena clara</label>
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="IV" class="hidden"> IV - Morena</label>
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="V" class="hidden"> V - Escura</label>
+                                <label class="tipo-pele-opt px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><input type="radio" name="tipo_pele" value="VI" class="hidden"> VI - Muito escura</label>
+                            </div>
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Uso Contínuo de Medicações</label>
-                            <textarea id="txt_uso_continuo" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Especifique anticoagulantes, imunossupressores, roacutan, vitaminas..."></textarea>
+                            <textarea id="txt_uso_continuo" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Anticoagulantes, imunossupressores, isotretinoína, corticoides..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Cirurgias Anteriores / Internações</label>
-                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Informe se houve cirurgias recentes ou problemas anestésicos..."></textarea>
+                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Cirurgias recentes, reações anestésicas, internações..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Condições de Pele Prévias</label>
-                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Psoríase, dermatite, rosácea, vitiligo, herpes repetição..."></textarea>
+                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Psoríase, dermatite, vitiligo, melasma, rosácea..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Histórico Familiar Relevante</label>
-                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças genéticas...">
+                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças autoimunes, queloides...">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Observações Adicionais</label>
+                            <textarea id="txt_observacoes" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Qualquer informação relevante não coberta acima..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -538,7 +607,7 @@
 
     <!-- Modal Termo de Consentimento Gerado -->
     <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             
             <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white">
@@ -548,7 +617,7 @@
                 </button>
             </div>
             
-            <div id="termo-imprimir" class="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white font-serif text-slate-800 text-sm leading-relaxed" style="max-height: 60vh;">
+            <div id="termo-imprimir" class="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white font-serif text-slate-800 text-sm leading-relaxed" style="max-height: 60vh; display: flex; flex-direction: column;">
                 <div class="text-center mb-8">
                     <h2 class="text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
                     <h3 class="font-bold mt-2 uppercase text-slate-700">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
@@ -570,14 +639,31 @@
                     <strong>4. DEVERES DO PACIENTE:</strong> Comprometo-me a seguir rigorosamente todas as prescrições médicas, recomendações pré e pós-procedimento, e a comparecer aos retornos agendados, isentando a Clínica Cicatrize e seus profissionais de responsabilidade em caso de negligência de minha parte.
                 </p>
                 
-                <div class="mt-12 mb-8 flex justify-between gap-8 flex-wrap">
-                    <div class="flex-1 min-w-[200px] border-t border-slate-800 pt-2 text-center">
-                        <p class="font-bold">Assinatura do(a) Paciente</p>
+                <!-- Bloco de assinatura — preenchido dinamicamente via JS em avancarParaTermo() -->
+                <div id="bloco-assinatura-termo" style="margin-top: auto; padding-top: 48px;">
+
+                    <!-- Campos side by side -->
+                    <div style="display: flex; gap: 48px; align-items: flex-end;">
+
+                        <!-- Coluna Esquerda: Paciente -->
+                        <div style="flex: 1;">
+                            <p id="assinatura-nome-paciente" style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 0;">&nbsp;</p>
+                            <div style="border-bottom: 1.5px solid #1e293b; width: 100%; margin-top: 36px; margin-bottom: 6px;"></div>
+                            <p style="font-size: 10px; color: #64748b; text-align: center;">Assinatura do(a) Paciente</p>
+                        </div>
+
+                        <!-- Coluna Direita: Clínica -->
+                        <div style="flex: 1;">
+                            <p style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 0;">Clínica Cicatrize</p>
+                            <div style="border-bottom: 1.5px solid #1e293b; width: 100%; margin-top: 36px; margin-bottom: 6px;"></div>
+                            <p style="font-size: 10px; color: #64748b; text-align: center;">Responsável / Clínica</p>
+                        </div>
+
                     </div>
-                    <div class="flex-1 min-w-[200px] border-t border-slate-800 pt-2 text-center">
-                        <p class="font-bold">Clínica Cicatrize</p>
-                        <p class="text-xs text-slate-500">Local e Data</p>
-                    </div>
+
+                    <!-- Data e Hora — linha separada abaixo dos campos -->
+                    <p id="assinatura-data-hora" style="margin-top: 14px; font-size: 10px; color: #64748b; text-align: right;">&nbsp;</p>
+
                 </div>
             </div>
 
@@ -603,7 +689,7 @@
 
     <!-- Modal de Confirmação Customizado -->
     <div id="modalConfirm" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
             style="background: #1e2235;">
             <div class="p-8 text-center">
@@ -626,7 +712,7 @@
 
     <!-- Modal de Alerta Customizado -->
     <div id="modalAlert" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in-up"
             style="background: #1e2235;">
             <div class="p-8 text-center">
@@ -940,18 +1026,33 @@
             const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
             f('nome', pac.nome);
             f('telefone', pac.telefone);
-            f('data_nascimento', pac.data_nascimento ? new Date(pac.data_nascimento).toLocaleDateString('pt-BR') : '');
-            f('cidade', pac.cidade);
-            f('endereco', pac.endereco);
-
-            // Atualiza o convênio no select customizado
-            const convenioInput = document.getElementById('convenio');
-            const convenioContainer = document.getElementById('select-convenio');
-            if (convenioInput && pac.convenio) {
-                convenioInput.value = pac.convenio;
-                const txt = convenioContainer?.querySelector('.selected-text');
-                if (txt) { txt.textContent = pac.convenio; txt.classList.remove('text-slate-400'); }
+            
+            // Corrige data de nascimento (evita shift de timezone)
+            if (pac.data_nascimento && pac.data_nascimento.includes('-')) {
+                f('data_nascimento', pac.data_nascimento.split('-').reverse().join('/'));
+            } else {
+                f('data_nascimento', pac.data_nascimento);
             }
+            f('cidade', pac.cidade);
+
+            // Helper para atualizar selects customizados
+            const setCustomSelect = (selectId, value, textMap = {}) => {
+                const input = document.getElementById(selectId);
+                const container = document.getElementById(`select-${selectId}`);
+                if (input && container && value) {
+                    input.value = value;
+                    const txtEl = container.querySelector('.selected-text');
+                    if (txtEl) {
+                        txtEl.textContent = textMap[value] || value;
+                        txtEl.classList.remove('text-slate-400');
+                        txtEl.classList.add('text-slate-800');
+                    }
+                }
+            };
+
+            setCustomSelect('convenio', pac.convenio);
+            setCustomSelect('uf', pac.uf);
+            setCustomSelect('sexo', pac.sexo, { 'M': 'Masculino', 'F': 'Feminino', 'O': 'Outro' });
 
             // Muda o botão de submit para Salvar Edição
             const btnSubmit = document.querySelector('#formCadastro button[type="submit"]');
@@ -1003,18 +1104,132 @@
 
             const modal = document.getElementById('modalDetalhes');
             modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            document.documentElement.classList.add('overflow-hidden');
             setTimeout(() => {
                 modal.querySelector('.transform').classList.add('scale-100', 'opacity-100');
             }, 10);
-            
+
+            applyModalDarkMode();
             await carregarPerfilDocumentos(pacienteSelecionadoId);
         }
+
+        // Aplica dark mode com contraste correto no #modalDetalhes via estilos inline
+        // (necessário pois CSS injetado perde para especificidade do Tailwind CDN)
+        function applyModalDarkMode() {
+            if (!document.documentElement.classList.contains('dark')) return;
+
+            const modal = document.getElementById('modalDetalhes');
+            if (!modal) return;
+
+            // Painel principal (bg-white rounded-2xl)
+            const panel = modal.querySelector('.relative.bg-white');
+            if (panel) panel.style.backgroundColor = '#1e293b';
+
+            // Header do modal (bg-slate-50 com border-b)
+            const header = modal.querySelector('.px-6.py-4.flex.items-center.gap-4');
+            if (header) {
+                header.style.backgroundColor = '#263147';
+                header.style.borderBottomColor = '#334155';
+            }
+
+            // Avatar icon bg
+            const avatar = modal.querySelector('.w-12.h-12.rounded-full');
+            if (avatar) {
+                avatar.style.backgroundColor = 'rgba(79,70,229,0.25)';
+                avatar.style.borderColor = 'rgba(79,70,229,0.4)';
+            }
+
+            // Subtítulo "Perfil do Paciente" (text-slate-400)
+            const subtitle = modal.querySelector('.text-\\[10px\\].font-bold.text-slate-400');
+            const allSmallTexts = modal.querySelectorAll('p.text-\\[10px\\]');
+            allSmallTexts.forEach(el => el.style.color = '#94a3b8');
+
+            // Nome do paciente (text-slate-800)
+            const nome = modal.querySelector('#modal-nome');
+            if (nome) nome.style.color = '#f1f5f9';
+
+            // Corpo scrollável (overflow-y-auto bg-white)
+            const body = modal.querySelector('.overflow-y-auto');
+            if (body) body.style.backgroundColor = '#192234';
+
+            // Cards de info: CHEGADA, CONVÊNIO (bg-indigo-50/50)
+            const infoCards = modal.querySelectorAll('.grid.grid-cols-3 > div');
+            infoCards.forEach((card, i) => {
+                if (i < 2) {
+                    // CHEGADA e CONVÊNIO
+                    card.style.backgroundColor = '#1e2d47';
+                    card.style.borderColor = '#2d4a72';
+                } else {
+                    // PACIENTE ID
+                    card.style.backgroundColor = '#1e293b';
+                    card.style.borderColor = '#334155';
+                }
+                // Label (text-indigo-400 ou text-slate-400)
+                const label = card.querySelector('span:first-child');
+                if (label) label.style.color = i < 2 ? '#818cf8' : '#94a3b8';
+                // Valor (text-slate-700 ou text-slate-500)
+                const value = card.querySelector('span:last-child');
+                if (value) value.style.color = '#e2e8f0';
+            });
+
+            // Seções (Anamnese + Termo) — containers com borda
+            const sections = modal.querySelectorAll('.border.border-slate-200.rounded-xl');
+            sections.forEach(sec => {
+                sec.style.borderColor = '#334155';
+                sec.style.backgroundColor = '#1e293b';
+
+                // Header da seção (bg-slate-50)
+                const secHeader = sec.querySelector('.bg-slate-50');
+                if (secHeader) {
+                    secHeader.style.backgroundColor = '#263147';
+                    secHeader.style.borderBottomColor = '#334155';
+                }
+                // h4 dentro do header
+                const h4 = sec.querySelector('h4');
+                if (h4) h4.style.color = '#e2e8f0';
+
+                // Body da seção (bg-white)
+                const secBody = sec.querySelector('.bg-white');
+                if (secBody) {
+                    secBody.style.backgroundColor = '#192234';
+                    secBody.style.color = '#cbd5e1';
+                }
+            });
+
+            // Botão Excluir (bg-rose-50)
+            const btnExcluir = modal.querySelector('#btnExcluirPacienteModal');
+            if (btnExcluir) {
+                btnExcluir.style.backgroundColor = 'rgba(244,63,94,0.15)';
+                btnExcluir.style.borderColor = 'rgba(244,63,94,0.3)';
+                btnExcluir.style.color = '#fda4af';
+            }
+
+            // Footer do modal (bg-slate-50 border-t)
+            const footer = modal.querySelector('.px-6.py-4.bg-slate-50.border-t');
+            if (footer) {
+                footer.style.backgroundColor = '#263147';
+                footer.style.borderTopColor = '#334155';
+            }
+
+            // Botão Editar (bg-indigo-50 text-indigo-700)
+            const btnEditar = modal.querySelector('#btnEditarPacienteModal');
+            if (btnEditar) {
+                btnEditar.style.backgroundColor = 'rgba(79,70,229,0.15)';
+                btnEditar.style.borderColor = 'rgba(79,70,229,0.3)';
+                btnEditar.style.color = '#a5b4fc';
+            }
+        }
+
 
         function fecharModal() {
             const modal = document.getElementById('modalDetalhes');
             modal.querySelector('.transform').classList.remove('scale-100', 'opacity-100');
             setTimeout(() => {
                 modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+                document.documentElement.classList.remove('overflow-hidden');
+                document.body.style.overflow = '';
                 pacienteSelecionadoId = null;
             }, 300);
         }
@@ -1048,7 +1263,7 @@
                     .eq('paciente_id', pacId)
                     .order('aceito_em', { ascending: false })
                     .limit(1)
-                    .single();
+                    .maybeSingle();
                     
                 const pAnamnese = window.supabaseClient
                     .from('cicatrize_checklist_anamnese')
@@ -1056,7 +1271,7 @@
                     .eq('paciente_id', pacId)
                     .order('created_at', { ascending: false })
                     .limit(1)
-                    .single();
+                    .maybeSingle();
 
                 const [resTermo, resAnamnese] = await Promise.allSettled([pTermo, pAnamnese]);
 
@@ -1085,38 +1300,79 @@
                     anaSts.textContent = "PREENCHIDO";
                     
                     const dtAnamnese = new Date(ad.created_at).toLocaleString('pt-BR');
-                    let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-1">`;
                     
                     const booleanField = (label, val) => `
-                        <div class="flex items-center gap-2">
-                            <i class="ph-bold ${val ? 'ph-check-circle text-emerald-500' : 'ph-x text-slate-300'}"></i>
-                            <span class="${val ? 'font-medium text-slate-700' : 'text-slate-400'}">${label}: ${val ? 'Sim' : 'Não'}</span>
+                        <div class="flex items-center gap-2 py-1">
+                            <i class="ph-bold ${val ? 'ph-check-circle text-emerald-500' : 'ph-x-circle text-slate-300'} text-base"></i>
+                            <span class="${val ? 'font-semibold text-slate-700' : 'text-slate-400'}">${label}</span>
                         </div>
                     `;
                     
-                    html += `<div class="space-y-2">`;
-                    html += `<p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-3">Condições Sis.</p>`;
-                    html += booleanField("Doenças Crônicas", ad.has_doencas_cronicas);
-                    html += booleanField("Alergia Conhecida", ad.has_alergia);
-                    html += booleanField("Marcapasso", ad.has_marcapasso);
-                    html += booleanField("Ferida em Membro Inf.", ad.has_ferida_mmii);
-                    html += `</div>`;
+                    let html = '';
                     
-                    html += `<div class="space-y-2">`;
-                    html += `<p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-3">Histórico & Hábitos</p>`;
-                    html += booleanField("Cirurgia Recente (<30d)", ad.has_cirurgia_recente);
-                    html += booleanField("Uso de Anticoagulante", ad.has_anticoagulante);
-                    html += booleanField("Histórico Oncológico", ad.has_historico_oncologico);
-                    html += booleanField("Gestante/Lactante", ad.is_gestante);
+                    // Condições Sistêmicas
+                    html += `<div class="mb-4">`;
+                    html += `<p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><i class="ph-bold ph-heart text-rose-400"></i> Condições Sistêmicas</p>`;
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0.5 pl-1">`;
+                    html += booleanField("Diabetes", ad.has_diabetes);
+                    html += booleanField("Hipertensão", ad.has_hipertensao);
+                    html += booleanField("Hipotireoidismo", ad.has_hipotireoidismo);
+                    html += booleanField("Outras Doenças Crônicas", ad.has_doencas_cronicas);
+                    html += booleanField("Marcapasso / Implante", ad.has_marcapasso);
+                    html += booleanField("Imunossupressão", ad.has_imunossupressao);
                     html += `</div></div>`;
                     
-                    if (ad.observacoes && ad.observacoes.trim() !== '') {
-                        html += `
-                        <div class="mt-5 pt-4 border-t border-slate-100">
-                            <p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-2">Observações Adicionais</p>
-                            <p class="text-sm text-slate-600 bg-slate-50/50 p-3 rounded-lg border border-slate-100 leading-relaxed">${ad.observacoes.replace(/\n/g, '<br>')}</p>
+                    // Alergias & Riscos
+                    html += `<div class="mb-4">`;
+                    html += `<p class="font-bold text-[11px] text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-1.5"><i class="ph-bold ph-warning text-amber-400"></i> Alergias & Fatores de Risco</p>`;
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0.5 pl-1">`;
+                    html += booleanField("Alergias Conhecidas", ad.has_alergias);
+                    html += booleanField("Distúrbio de Coagulação", ad.has_disturbio_coagulacao);
+                    html += booleanField("Tabagismo / Etilismo", ad.tabagismo_etilismo);
+                    html += booleanField("Gestante / Lactante", ad.is_gestante);
+                    html += `</div></div>`;
+                    
+                    // Dermatológico & Cirúrgico
+                    html += `<div class="mb-4">`;
+                    html += `<p class="font-bold text-[11px] text-emerald-600 uppercase tracking-widest mb-2 flex items-center gap-1.5"><i class="ph-bold ph-bandaids text-emerald-400"></i> Dermatológico & Cirúrgico</p>`;
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0.5 pl-1">`;
+                    html += booleanField("Cicatrização Anormal", ad.historico_cicatrizacao_anormal);
+                    html += booleanField("Cirurgia Recente (<30d)", ad.has_cirurgia_recente);
+                    html += booleanField("Herpes Recorrente", ad.has_herpes_recorrente);
+                    html += booleanField("Histórico Oncológico", ad.has_historico_oncologico);
+                    html += booleanField("Ferida em Membro Inf.", ad.has_ferida_mmii);
+                    html += booleanField("Pele Sensível / Reativa", ad.has_pele_sensivel);
+                    html += `</div></div>`;
+                    
+                    // Tipo de Pele
+                    if (ad.tipo_pele) {
+                        const tipoLabels = { 'I': 'I - Muito clara', 'II': 'II - Clara', 'III': 'III - Morena clara', 'IV': 'IV - Morena', 'V': 'V - Escura', 'VI': 'VI - Muito escura' };
+                        html += `<div class="mt-3 flex items-center gap-2">
+                            <span class="text-[11px] font-bold text-indigo-500 uppercase tracking-wider">Tipo de Pele:</span>
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-md border border-indigo-100">${tipoLabels[ad.tipo_pele] || ad.tipo_pele}</span>
                         </div>`;
                     }
+                    
+                    // Campos de texto
+                    const textFields = [
+                        { label: 'Uso Contínuo de Medicações', value: ad.uso_continuo },
+                        { label: 'Cirurgias Anteriores', value: ad.cirurgias_anteriores },
+                        { label: 'Condições de Pele', value: ad.condicoes_pele },
+                        { label: 'Histórico Familiar', value: ad.historico_familiar },
+                        { label: 'Observações', value: ad.observacoes }
+                    ];
+                    const filled = textFields.filter(f => f.value && f.value.trim());
+                    if (filled.length > 0) {
+                        html += `<div class="mt-4 pt-3 border-t border-slate-100 space-y-3">`;
+                        filled.forEach(f => {
+                            html += `<div>
+                                <p class="font-bold text-[11px] text-indigo-500 uppercase tracking-widest mb-1">${f.label}</p>
+                                <p class="text-sm text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">${f.value.replace(/\n/g, '<br>')}</p>
+                            </div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
                     html += `<div class="mt-4 pt-2 text-[10px] text-right text-slate-400 font-medium">Cadastrado no sistema em: ${dtAnamnese}</div>`;
                     
                     anaContent.innerHTML = html;
@@ -1263,18 +1519,51 @@
             document.getElementById('modalChecklistAnamnese').classList.add('hidden');
             dadosCadastroTemporario = null;
             submitEventTarget = null;
+            document.getElementById('chk_diabetes').checked = false;
+            document.getElementById('chk_hipertensao').checked = false;
+            document.getElementById('chk_hipotireoidismo').checked = false;
             document.getElementById('chk_doencas_cronicas').checked = false;
+            document.getElementById('chk_marcapasso').checked = false;
+            document.getElementById('chk_imunossupressao').checked = false;
             document.getElementById('chk_alergias').checked = false;
+            document.getElementById('chk_disturbio_coagulacao').checked = false;
             document.getElementById('chk_tabagismo_etilismo').checked = false;
+            document.getElementById('chk_gestante').checked = false;
             document.getElementById('chk_cicatrizacao').checked = false;
+            document.getElementById('chk_cirurgia_recente').checked = false;
+            document.getElementById('chk_herpes').checked = false;
+            document.getElementById('chk_historico_oncologico').checked = false;
+            document.getElementById('chk_ferida_mmii').checked = false;
+            document.getElementById('chk_pele_sensivel').checked = false;
+            document.querySelectorAll('input[name="tipo_pele"]').forEach(r => { r.checked = false; r.closest('label').classList.remove('bg-indigo-100','border-indigo-400','text-indigo-800'); });
             document.getElementById('txt_uso_continuo').value = '';
             document.getElementById('txt_cirurgias').value = '';
             document.getElementById('txt_pele').value = '';
             document.getElementById('txt_historico_familiar').value = '';
+            document.getElementById('txt_observacoes').value = '';
             document.getElementById('chk_termo_aceito').checked = false;
         }
 
         function avancarParaTermo() {
+            // Injeta nome do paciente e data/hora exata no bloco de assinatura
+            const nomePaciente = (dadosCadastroTemporario && dadosCadastroTemporario.nome)
+                ? dadosCadastroTemporario.nome
+                : (document.getElementById('nome')?.value || '');
+
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+            const horaFormatada = agora.toLocaleTimeString('pt-BR', {
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const elNome = document.getElementById('assinatura-nome-paciente');
+            const elDataHora = document.getElementById('assinatura-data-hora');
+
+            if (elNome) elNome.textContent = nomePaciente || '—';
+            if (elDataHora) elDataHora.textContent = `${dataFormatada} às ${horaFormatada}`;
+
             document.getElementById('modalChecklistAnamnese').classList.add('hidden');
             document.getElementById('modalTermoConsentimento').classList.remove('hidden');
         }
@@ -1286,6 +1575,22 @@
         }
 
         function imprimirTermo() {
+            // Garante que nome e data/hora estejam preenchidos no bloco de assinatura
+            // (para reimpressão de termos de pacientes já cadastrados)
+            const elNome = document.getElementById('assinatura-nome-paciente');
+            const elDataHora = document.getElementById('assinatura-data-hora');
+
+            if (elNome && (!elNome.textContent || elNome.textContent.trim() === '' || elNome.innerHTML === '&nbsp;')) {
+                const nomeModal = document.getElementById('modal-nome')?.textContent?.trim();
+                if (nomeModal) elNome.textContent = nomeModal;
+            }
+            if (elDataHora && (!elDataHora.textContent || elDataHora.textContent.trim() === '' || elDataHora.innerHTML === '&nbsp;')) {
+                // Tenta pegar a data do campo "Assinado em: ..." do perfil, senão usa agora
+                const textoData = document.getElementById('docSecTermoData')?.textContent || '';
+                const matchData = textoData.match(/Assinado em:\s*(.+)/);
+                elDataHora.textContent = matchData ? matchData[1].trim() : new Date().toLocaleString('pt-BR');
+            }
+
             const content = document.getElementById('termo-imprimir').innerHTML;
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
@@ -1315,14 +1620,28 @@
             }
             
             const payloadAnamnese = {
+                has_diabetes: document.getElementById('chk_diabetes').checked,
+                has_hipertensao: document.getElementById('chk_hipertensao').checked,
+                has_hipotireoidismo: document.getElementById('chk_hipotireoidismo').checked,
                 has_doencas_cronicas: document.getElementById('chk_doencas_cronicas').checked,
+                has_marcapasso: document.getElementById('chk_marcapasso').checked,
+                has_imunossupressao: document.getElementById('chk_imunossupressao').checked,
                 has_alergias: document.getElementById('chk_alergias').checked,
+                has_disturbio_coagulacao: document.getElementById('chk_disturbio_coagulacao').checked,
                 tabagismo_etilismo: document.getElementById('chk_tabagismo_etilismo').checked,
+                is_gestante: document.getElementById('chk_gestante').checked,
                 historico_cicatrizacao_anormal: document.getElementById('chk_cicatrizacao').checked,
+                has_cirurgia_recente: document.getElementById('chk_cirurgia_recente').checked,
+                has_herpes_recorrente: document.getElementById('chk_herpes').checked,
+                has_historico_oncologico: document.getElementById('chk_historico_oncologico').checked,
+                has_ferida_mmii: document.getElementById('chk_ferida_mmii').checked,
+                has_pele_sensivel: document.getElementById('chk_pele_sensivel').checked,
+                tipo_pele: (document.querySelector('input[name="tipo_pele"]:checked') || {}).value || null,
                 uso_continuo: document.getElementById('txt_uso_continuo').value,
                 cirurgias_anteriores: document.getElementById('txt_cirurgias').value,
                 condicoes_pele: document.getElementById('txt_pele').value,
                 historico_familiar: document.getElementById('txt_historico_familiar').value,
+                observacoes: document.getElementById('txt_observacoes').value,
                 ambiente: 'cicatrize'
             };
 
@@ -1439,6 +1758,66 @@
                 if (parts.length === 3) data.data_nascimento = `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
 
+            if (pacienteEmEdicao) {
+                // MODO EDIÇÃO
+                statusDiv.textContent = "⏳ Atualizando dados do paciente...";
+                statusDiv.className = "status-message loading";
+                
+                try {
+                    if (window.supabaseClient) {
+                        const payload = {
+                            nome: data.nome,
+                            telefone: data.telefone,
+                            data_nascimento: data.data_nascimento,
+                            cidade: data.cidade,
+                            uf: data.uf,
+                            sexo: data.sexo,
+                            convenio: data.convenio,
+                            responsavel_nome: data.responsavel_nome,
+                            responsavel_parentesco: data.responsavel_parentesco
+                        };
+                        const { error } = await window.supabaseClient
+                            .from('pacientes')
+                            .update(payload)
+                            .eq('id', pacienteEmEdicao.id);
+                        
+                        if (error) throw error;
+                    } else {
+                        throw new Error("Supabase não inicializado");
+                    }
+                    
+                    statusDiv.textContent = "✅ Paciente atualizado com sucesso!";
+                    statusDiv.className = "status-message success";
+                    
+                    // Reset form to normal mode
+                    e.target.reset();
+                    pacienteEmEdicao = null;
+                    const btnSubmit = document.querySelector('#formCadastro button[type="submit"]');
+                    if (btnSubmit) {
+                        btnSubmit.textContent = 'Cadastrar e Enviar para Fila';
+                        btnSubmit.classList.replace('bg-amber-500', 'bg-indigo-600');
+                        btnSubmit.classList.replace('hover:bg-amber-600', 'hover:bg-indigo-700');
+                    }
+                    document.querySelectorAll('.selected-text').forEach(s => {
+                        s.textContent = 'Selecione';
+                        s.classList.add('text-slate-400');
+                    });
+                    
+                    carregarFila();
+                } catch (err) {
+                    console.error(err);
+                    statusDiv.textContent = "❌ Erro ao atualizar paciente.";
+                    statusDiv.className = "status-message error";
+                }
+                setTimeout(() => {
+                    if (statusDiv.className.includes('success')) {
+                        statusDiv.textContent = "";
+                        statusDiv.className = "";
+                    }
+                }, 5000);
+                return;
+            }
+
             if (!data.medico_id || data.medico_id.trim() === '') {
                 const mid = window.getMedicoId ? window.getMedicoId() : null;
                 if (mid) data.medico_id = mid;
@@ -1459,6 +1838,18 @@
             dadosCadastroTemporario = data;
             submitEventTarget = e.target;
             document.getElementById('modalChecklistAnamnese').classList.remove('hidden');
+        });
+
+        // Tipo de Pele radio visual toggle
+        document.querySelectorAll('#tipo_pele_group .tipo-pele-opt').forEach(label => {
+            label.addEventListener('click', () => {
+                document.querySelectorAll('#tipo_pele_group .tipo-pele-opt').forEach(l => {
+                    l.classList.remove('bg-indigo-100','border-indigo-400','text-indigo-800');
+                    l.classList.add('bg-slate-50','border-slate-200');
+                });
+                label.classList.remove('bg-slate-50','border-slate-200');
+                label.classList.add('bg-indigo-100','border-indigo-400','text-indigo-800');
+            });
         });
     </script>
 </body>

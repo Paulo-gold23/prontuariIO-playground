@@ -1,476 +1,277 @@
+/**
+ * app.js  (Orquestrador)
+ * ─────────────────────────────────────────────────────────────
+ * Responsabilidade: bootstrap da página + registro de eventos.
+ * Toda lógica de negócio foi extraída para js/services/ e js/ui/.
+ *
+ * Dependências (carregadas ANTES no HTML):
+ *   js/config.js
+ *   js/ui/toast.js
+ *   js/ui/recording.js
+ *   js/services/assinatura.service.js
+ *   js/services/produto.service.js
+ *   js/ui/produtos-modal.js
+ *   auth-guard.js
+ *   app-images.js
+ */
 
-console.log('[app.js v20260320] VERSÃO COM MODAL DE ASSINATURA carregada.');
+console.log('[app.js v2] Orquestrador carregado.');
 
-// ================= CONFIGURAÇÕES E SELETORES =================
+// ── Constantes ──────────────────────────────────────────────────────────────
 
-const btnGravar = document.getElementById("btnGravar");
-const btnPausar = document.getElementById("btnPausar");
-const spacerPausar = document.getElementById("spacerPausar");
-const btnProcessarIA = document.getElementById("btnProcessarIA");
-const btnRecomecar = document.getElementById("btnRecomecar");
-const acoesPosGrava = document.getElementById("acoesPosGrava");
-const playerAudio = document.getElementById("playerAudio");
-const controlPrincipal = document.getElementById("controlPrincipal");
-const hintText = document.getElementById("hintText");
-const btnNovoPaciente = document.getElementById("btnNovoPaciente");
+var WEBHOOK_BASE_URL = (window.AppConfig && window.AppConfig.WEBHOOK_BASE_URL)
+    || 'https://n8n.srv1181762.hstgr.cloud/webhook';
 
-const statusText = document.getElementById("statusText");
-const statusDot = document.getElementById("statusDot");
-const timer = document.getElementById("timer");
-const waveformCanvas = document.getElementById("waveformCanvas");
+// ── Estado da página ────────────────────────────────────────────────────────
 
-let mediaRecorder;
-let audioChunks = [];
-let segundos = 0;
-let timerInterval = null;
-let currentStream = null;
-let audioBlobFinal = null;
-let consultaIdGlobal = null;
-let isRecording = false;
-let isPaused = false;
+var pacienteAtual     = null;
+var medicoAtivo       = JSON.parse(localStorage.getItem('medico_ativo')) || {};
+var consultaIdGlobal  = null;
+var audioBlobFinal    = null;
 
-let pacienteAtual = null;
-let medicoAtivo = JSON.parse(localStorage.getItem('medico_ativo')) || {};
-const WEBHOOK_BASE_URL = "https://n8n.srv1181762.hstgr.cloud/webhook";
+// ── Seletores (cacheados) ───────────────────────────────────────────────────
+
+var btnGravar      = document.getElementById('btnGravar');
+var btnPausar      = document.getElementById('btnPausar');
+var btnProcessarIA = document.getElementById('btnProcessarIA');
+var btnRecomecar   = document.getElementById('btnRecomecar');
+var btnNovoPaciente= document.getElementById('btnNovoPaciente');
+var btnAprovar     = document.getElementById('btnAprovar');
+var btnDescartar   = document.getElementById('btnDescartar');
+
+// ── Helpers de médico ───────────────────────────────────────────────────────
 
 async function garantirMedicoId() {
     if (medicoAtivo && medicoAtivo.id) return medicoAtivo.id;
 
     if (!window.supabaseClient || !window.fetchMedicoData) {
-        throw new Error("Sessao medica indisponivel");
+        throw new Error('Sessão médica indisponível');
     }
 
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    var sessionRes = await window.supabaseClient.auth.getSession();
+    var session    = sessionRes.data && sessionRes.data.session;
     if (!session || !session.user || !session.user.id) {
-        throw new Error("Sessao invalida");
+        throw new Error('Sessão inválida');
     }
 
-    const medicoDb = await window.fetchMedicoData(session.user.id);
-    if (!medicoDb || !medicoDb.id) {
-        throw new Error("medico_id nao encontrado");
-    }
+    var medicoDb = await window.fetchMedicoData(session.user.id);
+    if (!medicoDb || !medicoDb.id) throw new Error('medico_id não encontrado');
 
-    medicoAtivo = {
-        ...medicoAtivo,
-        id: medicoDb.id,
-        auth_id: session.user.id,
-        nome: medicoAtivo.nome || medicoDb.nome || "Dr(a). Medico",
-        crm: medicoAtivo.crm || medicoDb.crm || ""
-    };
-    localStorage.setItem("medico_ativo", JSON.stringify(medicoAtivo));
+    medicoAtivo = Object.assign({}, medicoAtivo, {
+        id:          medicoDb.id,
+        auth_id:     session.user.id,
+        nome:        medicoAtivo.nome || medicoDb.nome || 'Dr(a). Médico',
+        crm:         medicoAtivo.crm  || medicoDb.crm  || '',
+        tipo_clinica: medicoAtivo.tipo_clinica || medicoDb.tipo_clinica || null,
+    });
+    localStorage.setItem('medico_ativo', JSON.stringify(medicoAtivo));
     return medicoAtivo.id;
 }
 
-// ================= INICIALIZAÇÃO =================
+function ativarModoCicatrize() {
+    if (medicoAtivo && medicoAtivo.tipo_clinica === 'cicatrize') {
+        var secao = document.getElementById('secaoCurativo');
+        if (secao) secao.classList.remove('hidden');
+    }
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const pNome = urlParams.get('paciente');
-    const pId = urlParams.get('id');
-    const pConvenio = urlParams.get('convenio') || 'Particular';
+// ── Bootstrap ───────────────────────────────────────────────────────────────
 
-    const mNameEl = document.getElementById('medicoNome');
-    const mAvatarEl = document.getElementById('medicoAvatar');
-    garantirMedicoId().then(() => {
+document.addEventListener('DOMContentLoaded', function () {
+    var urlParams = new URLSearchParams(window.location.search);
+    var pNome  = urlParams.get('paciente');
+    var pId    = urlParams.get('id');
+    var pConv  = urlParams.get('convenio') || 'Particular';
+
+    // Preenche cabeçalho do médico
+    garantirMedicoId().then(function () {
+        var mNameEl  = document.getElementById('medicoNome');
+        var mAvatar  = document.getElementById('medicoAvatar');
         if (mNameEl && medicoAtivo && medicoAtivo.nome) {
-            mNameEl.textContent = `Dr(a). ${medicoAtivo.nome}`;
-            if (mAvatarEl) {
-                mAvatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(medicoAtivo.nome)}&background=6366f1&color=fff`;
-            }
+            mNameEl.textContent = 'Dr(a). ' + medicoAtivo.nome;
         }
-    }).catch(err => console.error(err));
+        if (mAvatar && medicoAtivo && medicoAtivo.nome) {
+            mAvatar.src = 'https://ui-avatars.com/api/?name=' +
+                encodeURIComponent(medicoAtivo.nome) + '&background=6366f1&color=fff';
+        }
+        ativarModoCicatrize();
+    }).catch(function (err) { console.error(err); });
 
+    // Preenche dados do paciente
     if (pNome && pId) {
-        pacienteAtual = { id: pId, nome: pNome, convenio: pConvenio };
+        pacienteAtual = { id: pId, nome: pNome, convenio: pConv };
 
-        const nomeEl = document.getElementById('pacienteNome');
+        var nomeEl = document.getElementById('pacienteNome');
         if (nomeEl) nomeEl.textContent = pNome;
 
-        const convEl = document.getElementById('pacienteConvenio');
-        if (convEl) convEl.textContent = pConvenio;
+        var convEl = document.getElementById('pacienteConvenio');
+        if (convEl) convEl.textContent = pConv;
 
-        document.title = `Atendimento: ${pNome} | Prontuar.io`;
+        document.title = 'Atendimento: ' + pNome + ' | Prontuar.io';
 
-        const statusBadge = document.getElementById('pacienteStatus');
-        if (statusBadge) {
-            statusBadge.className = "px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black rounded-full border border-amber-100 uppercase tracking-widest flex items-center gap-1.5";
-            statusBadge.innerHTML = `<div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div> Em Atendimento`;
+        var badge = document.getElementById('pacienteStatus');
+        if (badge) {
+            badge.className = 'px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black rounded-full border border-amber-100 uppercase tracking-widest flex items-center gap-1.5';
+            badge.innerHTML = '<div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div> Em Atendimento';
         }
 
         if (btnGravar) btnGravar.disabled = false;
-        setRecordingStatus("ready");
+        window.Recording.setStatus('ready');
     }
 });
 
-// ================= UI HELPERS (CUSTOM POPUPS) =================
+// ── Gravação — Eventos ──────────────────────────────────────────────────────
 
-function showToast(message, type = "success") {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-
-    let icon = "ph-fill ph-check-circle text-emerald-500";
-    if (type === "error") icon = "ph-fill ph-warning-circle text-rose-500";
-    if (type === "info") icon = "ph-fill ph-info text-indigo-500";
-
-    toast.innerHTML = `
-        <i class="${icon} text-2xl"></i>
-        <span class="text-sm font-bold text-slate-700">${message}</span>
-    `;
-
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(20px)';
-        toast.style.transition = '0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-function showConfirm(title, message, callback) {
-    const overlay = document.getElementById('confirmOverlay');
-    document.getElementById('confirmTitle').textContent = title;
-    document.getElementById('confirmMessage').textContent = message;
-
-    overlay.style.display = 'flex';
-
-    document.getElementById('confirmOk').onclick = () => {
-        overlay.style.display = 'none';
-        callback();
-    };
-
-    document.getElementById('confirmCancel').onclick = () => {
-        overlay.style.display = 'none';
-    };
-}
-
-function setRecordingStatus(state) {
-    switch (state) {
-        case "ready":
-            statusText.textContent = "Pronto para iniciar atendimento";
-            statusDot.className = "w-2 h-2 rounded-full bg-slate-400";
-            statusDot.innerHTML = '';
-            hintText.textContent = "Clique para começar";
-            controlPrincipal.style.display = "flex";
-            acoesPosGrava.classList.add("hidden");
-            btnPausar.classList.add("hidden");
-            if (spacerPausar) spacerPausar.classList.add("hidden");
-            break;
-        case "recording":
-            statusText.textContent = "Gravando consulta...";
-            statusDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-pulse";
-            statusDot.innerHTML = '';
-            hintText.textContent = "Clique para parar";
-            btnPausar.classList.remove("hidden");
-            if (spacerPausar) spacerPausar.classList.remove("hidden");
-            break;
-        case "paused":
-            statusText.textContent = "Gravação pausada";
-            statusDot.className = "w-2 h-2 rounded-full bg-amber-500";
-            statusDot.innerHTML = '';
-            hintText.textContent = "Clique para retomar";
-            break;
-        case "finished":
-            statusText.textContent = "Áudio capturado";
-            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            statusDot.innerHTML = '';
-            hintText.style.display = "none";
-            controlPrincipal.style.display = "none";
-            acoesPosGrava.classList.remove("hidden");
-            break;
-        case "processing":
-            statusText.textContent = "IA analisando áudio...";
-            statusDot.className = "loader-7";
-            statusDot.innerHTML = '<div class="square"></div>';
-            acoesPosGrava.classList.add("opacity-50", "pointer-events-none");
-            break;
-    }
-}
-
-// ================= GRAVAÇÃO DE ÁUDIO =================
-
-async function iniciarGravacao() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        currentStream = stream;
-
-        const mimeType = getSupportedMimeType();
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) audioChunks.push(event.data);
-        };
-
-        mediaRecorder.onstop = () => {
-            audioBlobFinal = new Blob(audioChunks, { type: mimeType });
-            const audioUrl = URL.createObjectURL(audioBlobFinal);
-            playerAudio.src = audioUrl;
-            setRecordingStatus("finished");
-        };
-
-        mediaRecorder.start();
-        isRecording = true;
-        isPaused = false;
-        iniciarTimer();
-
-        btnGravar.innerHTML = `<i class="ph-fill ph-stop text-5xl"></i>`;
-        btnGravar.classList.replace('from-indigo-600', 'from-rose-500');
-        btnGravar.classList.replace('to-indigo-700', 'to-rose-600');
-
-        setRecordingStatus("recording");
-        if (waveformCanvas) desenharOnda(stream);
-
-    } catch (err) {
-        console.error("Erro ao acessar microfone:", err);
-        showToast("Não foi possível acessar o microfone.", "error");
-    }
-}
-
-function pararGravacao() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-        isRecording = false;
-        isPaused = false;
-        pararTimer();
-        liberarStream();
-
-        btnGravar.innerHTML = `<i class="ph-fill ph-microphone text-5xl"></i>`;
-        btnGravar.classList.replace('from-rose-500', 'from-indigo-600');
-        btnGravar.classList.replace('to-rose-600', 'to-indigo-700');
-    }
-}
-
-function togglePause() {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
-
-    if (!isPaused) {
-        mediaRecorder.pause();
-        isPaused = true;
-        pararTimer();
-        setRecordingStatus("paused");
-        document.getElementById('iconPausar').className = "ph-fill ph-play text-3xl";
-        btnPausar.classList.replace('text-slate-400', 'text-amber-500');
-    } else {
-        mediaRecorder.resume();
-        isPaused = false;
-        continuarTimer();
-        setRecordingStatus("recording");
-        document.getElementById('iconPausar').className = "ph-fill ph-pause text-3xl";
-        btnPausar.classList.replace('text-amber-500', 'text-slate-400');
-    }
-}
-
-function getSupportedMimeType() {
-    const types = ['audio/webm', 'audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/mpeg'];
-    for (const t of types) {
-        if (MediaRecorder.isTypeSupported(t)) return t;
-    }
-    return '';
-}
-
-function liberarStream() {
-    if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-        currentStream = null;
-    }
-}
-
-// ================= TIMER =================
-
-function iniciarTimer() {
-    segundos = 0;
-    timer.textContent = "00:00";
-    continuarTimer();
-}
-
-function continuarTimer() {
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-        segundos++;
-        const mins = Math.floor(segundos / 60).toString().padStart(2, '0');
-        const secs = (segundos % 60).toString().padStart(2, '0');
-        timer.textContent = `${mins}:${secs}`;
-    }, 1000);
-}
-
-function pararTimer() {
-    clearInterval(timerInterval);
-}
-
-// ================= VISUALIZER =================
-
-function desenharOnda(stream) {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-
-    analyser.fftSize = 64;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const ctx = waveformCanvas.getContext("2d");
-    const width = waveformCanvas.width;
-    const height = waveformCanvas.height;
-
-    function render() {
-        if (!isRecording || isPaused) {
-            if (!isRecording) ctx.clearRect(0, 0, width, height);
-            if (isRecording && isPaused) requestAnimationFrame(render);
-            return;
+if (btnGravar) {
+    btnGravar.onclick = function () {
+        if (!window.Recording) return;
+        // Detecta estado pelo botão
+        if (btnGravar.querySelector('.ph-stop')) {
+            window.Recording.parar();
+        } else {
+            window.Recording.iniciar();
         }
-        requestAnimationFrame(render);
-        analyser.getByteFrequencyData(dataArray);
-
-        ctx.clearRect(0, 0, width, height);
-        const barWidth = (width / bufferLength) * 2.5;
-        let barHeight;
-        let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-            barHeight = (dataArray[i] / 255) * height;
-            ctx.fillStyle = `rgba(79, 70, 229, ${barHeight / height + 0.1})`;
-            ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-            x += barWidth + 2;
-        }
-    }
-    render();
-}
-
-// ================= EVENTOS =================
-
-btnGravar.onclick = () => {
-    if (!isRecording) iniciarGravacao();
-    else pararGravacao();
-};
-
-if (btnNovoPaciente) {
-    btnNovoPaciente.onclick = () => {
-        window.location.href = "recepcao.html";
     };
 }
 
-btnPausar.onclick = () => togglePause();
+if (btnPausar) btnPausar.onclick = function () { window.Recording.togglePause(); };
 
-btnRecomecar.onclick = () => {
-    showConfirm("Recomeçar Gravação", "Isso apagará o áudio atual. Continuar?", () => {
-        audioBlobFinal = null;
-        playerAudio.src = "";
-        timer.textContent = "00:00";
-        setRecordingStatus("ready");
-    });
-};
+// Recording.js despacha 'recording:done' quando o áudio está pronto
+document.addEventListener('recording:done', function (e) {
+    audioBlobFinal = e.detail.blob;
+});
 
-btnProcessarIA.onclick = () => processarProntuario();
+if (btnRecomecar) {
+    btnRecomecar.onclick = function () {
+        window.showConfirm(
+            'Recomeçar Gravação',
+            'Isso apagará o áudio atual. Continuar?',
+            function () {
+                audioBlobFinal = null;
+                window.Recording.resetar();
+            }
+        );
+    };
+}
+
+if (btnProcessarIA) btnProcessarIA.onclick = processarProntuario;
+if (btnNovoPaciente) btnNovoPaciente.onclick = function () { window.location.href = 'recepcao.html'; };
+
+// ── Processar Prontuário ────────────────────────────────────────────────────
 
 async function processarProntuario() {
-    if (!pacienteAtual) return showToast("Selecione um paciente", "error");
-    if (!audioBlobFinal) return showToast("Grave primeiro", "error");
+    if (!pacienteAtual) return window.showToast('Selecione um paciente', 'error');
+    if (!audioBlobFinal) return window.showToast('Grave primeiro', 'error');
 
-    setRecordingStatus("processing");
-    btnProcessarIA.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Analisando...`;
+    window.Recording.setStatus('processing');
+    btnProcessarIA.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Analisando...';
 
-    const formData = new FormData();
-    formData.append("audio", audioBlobFinal, "consulta.webm");
-    formData.append("paciente_id", pacienteAtual.id);
-    const medicoId = await garantirMedicoId();
-    formData.append("medico_id", medicoId);
+    var formData = new FormData();
+    formData.append('audio', audioBlobFinal, 'consulta.webm');
+    formData.append('paciente_id', pacienteAtual.id);
 
     try {
-        const authHeaders = await window.getAuthHeaders();
-        const response = await fetch(WEBHOOK_BASE_URL + "/novaConsulta", {
-            method: "POST",
-            headers: {
-                ...authHeaders
-            },
-            body: formData
+        var medicoId    = await garantirMedicoId();
+        var authHeaders = await window.getAuthHeaders();
+        formData.append('medico_id', medicoId);
+
+        var response = await fetch(WEBHOOK_BASE_URL + '/novaConsulta', {
+            method: 'POST',
+            headers: authHeaders,
+            body: formData,
         });
 
-        const data = await response.json();
+        var data = await response.json();
+
         if (data.success || data.consulta_id) {
             consultaIdGlobal = data.consulta_id;
+            _preencherFormulario(data);
             document.getElementById('gravacaoContainer').classList.add('hidden');
             document.getElementById('resultadoProntuario').classList.remove('hidden');
-
-            document.getElementById('hda').value = data.hda || data.dados_extraidos?.hda || '';
-            document.getElementById('exame_fisico').value = data.exame_fisico || data.dados_extraidos?.exame_fisico || '';
-            document.getElementById('diagnostico').value = data.diagnostico || data.dados_extraidos?.diagnostico || '';
-
-            // Tratamento + Observações
-            let trat = data.tratamento || data.dados_extraidos?.tratamento || '';
-            const obs = data.observacoes || data.dados_extraidos?.observacoes || '';
-            if (obs && !trat.includes(obs)) {
-                trat += `\n\n📌 OBSERVAÇÕES:\n${obs}`;
-            }
-            document.getElementById('tratamento').value = trat;
-
-            showToast("Prontuário gerado!", "success");
+            window.showToast('Prontuário gerado!', 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            throw new Error(data.message || "Erro no processamento da IA");
+            throw new Error(data.message || 'Erro no processamento da IA');
         }
     } catch (err) {
-        showToast("Erro: " + err.message, "error");
-        setRecordingStatus("finished");
-        btnProcessarIA.innerHTML = `<i class="ph-fill ph-sparkle text-2xl"></i> ANALISAR COM IA`;
-        acoesPosGrava.classList.remove("opacity-50", "pointer-events-none");
+        window.showToast('Erro: ' + err.message, 'error');
+        window.Recording.setStatus('finished');
+        btnProcessarIA.innerHTML = '<i class="ph-fill ph-sparkle text-2xl"></i> ANALISAR COM IA';
+        var acoes = document.getElementById('acoesPosGrava');
+        if (acoes) acoes.classList.remove('opacity-50', 'pointer-events-none');
     }
 }
 
-// ================= APROVAÇÃO FINAL (COM MODAL DE ASSINATURA LEGAL) =================
+function _preencherFormulario(data) {
+    var d = data.dados_extraidos || data;
 
-const btnAprovar = document.getElementById('btnAprovar');
-const btnDescartar = document.getElementById('btnDescartar');
+    _setVal('hda',          d.hda);
+    _setVal('exame_fisico', d.exame_fisico);
+    _setVal('diagnostico',  d.diagnostico);
 
-// Elementos do Modal de Assinatura Legal
-const modalAssinatura = document.getElementById('modalAssinaturaLegal');
-const checkboxAcordo = document.getElementById('checkboxAcordo');
-const btnConfirmarAssinatura = document.getElementById('btnConfirmarAssinatura');
-const btnCancelarAssinatura = document.getElementById('btnCancelarAssinatura');
-const btnFecharModalAssinatura = document.getElementById('btnFecharModalAssinatura');
-const labelAcordoAssinatura = document.getElementById('labelAcordoAssinatura');
-const timestampAssinatura = document.getElementById('timestampAssinatura');
+    var trat = d.tratamento || '';
+    var obs  = d.observacoes || '';
+    if (obs && !trat.includes(obs)) trat += '\n\n📌 OBSERVAÇÕES:\n' + obs;
+    _setVal('tratamento', trat);
 
-// Toggle do checkbox -> habilita/desabilita botão de assinar
+    // Curativo (Clínica Cicatrize)
+    var curativo = data.curativo || d.curativo || null;
+    if (curativo && typeof curativo === 'object') {
+        var temDados = curativo.procedimento || curativo.fototerapia || curativo.materiais_listados;
+        if (temDados) {
+            var secao = document.getElementById('secaoCurativo');
+            if (secao) secao.classList.remove('hidden');
+        }
+        _setVal('curativo_procedimento', curativo.procedimento);
+        _setVal('curativo_fototerapia',  curativo.fototerapia);
+
+        var mat = curativo.materiais_listados || '';
+        if (Array.isArray(mat)) mat = mat.join('\n');
+        _setVal('curativo_materiais', mat);
+    }
+}
+
+function _setVal(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.value = value || '';
+}
+
+// ── Modal de Assinatura ─────────────────────────────────────────────────────
+
+var modalAssinatura       = document.getElementById('modalAssinaturaLegal');
+var checkboxAcordo        = document.getElementById('checkboxAcordo');
+var btnConfirmarAssinatura= document.getElementById('btnConfirmarAssinatura');
+var btnCancelarAssinatura = document.getElementById('btnCancelarAssinatura');
+var btnFecharModalAssin   = document.getElementById('btnFecharModalAssinatura');
+var labelAcordo           = document.getElementById('labelAcordoAssinatura');
+var elTimestamp           = document.getElementById('timestampAssinatura');
+
 if (checkboxAcordo) {
-    checkboxAcordo.addEventListener('change', () => {
-        const isChecked = checkboxAcordo.checked;
-        if (btnConfirmarAssinatura) btnConfirmarAssinatura.disabled = !isChecked;
-        // Visual feedback no label
-        if (labelAcordoAssinatura) {
-            if (isChecked) {
-                labelAcordoAssinatura.classList.remove('border-slate-200');
-                labelAcordoAssinatura.classList.add('border-emerald-400', 'bg-emerald-50/50');
-            } else {
-                labelAcordoAssinatura.classList.add('border-slate-200');
-                labelAcordoAssinatura.classList.remove('border-emerald-400', 'bg-emerald-50/50');
-            }
+    checkboxAcordo.addEventListener('change', function () {
+        var ok = checkboxAcordo.checked;
+        if (btnConfirmarAssinatura) btnConfirmarAssinatura.disabled = !ok;
+        if (labelAcordo) {
+            labelAcordo.classList.toggle('border-slate-200',  !ok);
+            labelAcordo.classList.toggle('border-emerald-400', ok);
+            labelAcordo.classList.toggle('bg-emerald-50/50',   ok);
         }
     });
 }
 
 function abrirModalAssinatura() {
-    // Preencher nome do médico dinamicamente
-    const nomeEl = document.getElementById('nomeAssinante');
-    if (nomeEl && medicoAtivo && medicoAtivo.nome) {
-        nomeEl.textContent = medicoAtivo.nome;
-    }
-    // Resetar checkbox a cada abertura
+    var nomeEl = document.getElementById('nomeAssinante');
+    if (nomeEl && medicoAtivo && medicoAtivo.nome) nomeEl.textContent = medicoAtivo.nome;
     if (checkboxAcordo) {
         checkboxAcordo.checked = false;
         checkboxAcordo.dispatchEvent(new Event('change'));
     }
-    // Exibir timestamp atual
-    if (timestampAssinatura) {
-        const agora = new Date();
-        const fmt = agora.toLocaleDateString('pt-BR', {
+    if (elTimestamp) {
+        var fmt = new Date().toLocaleDateString('pt-BR', {
             day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
         });
-        timestampAssinatura.textContent = `Data/Hora da assinatura: ${fmt}`;
+        elTimestamp.textContent = 'Data/Hora da assinatura: ' + fmt;
     }
-    // Mostrar modal
     if (modalAssinatura) modalAssinatura.style.display = 'flex';
 }
 
@@ -478,229 +279,259 @@ function fecharModalAssinatura() {
     if (modalAssinatura) modalAssinatura.style.display = 'none';
 }
 
-// Fechar modal com botões
 if (btnCancelarAssinatura) btnCancelarAssinatura.onclick = fecharModalAssinatura;
-if (btnFecharModalAssinatura) btnFecharModalAssinatura.onclick = fecharModalAssinatura;
+if (btnFecharModalAssin)   btnFecharModalAssin.onclick   = fecharModalAssinatura;
 
-// Ao clicar em "Finalizar e Assinar Prontuário" -> abre o modal de confirmação legal
 if (btnAprovar) {
-    console.log('[app.js] btnAprovar encontrado, onclick configurado para abrir modal.');
-    btnAprovar.onclick = () => {
-        console.log('[app.js] btnAprovar clicado! consultaIdGlobal =', consultaIdGlobal);
-        if (!consultaIdGlobal) {
-            // abrindo modal mesmo assim para teste.
-        }
-        abrirModalAssinatura();
-    };
+    btnAprovar.onclick = function () { abrirModalAssinatura(); };
 }
 
-// Ao confirmar a assinatura no modal -> executa a aprovação real
-if (btnConfirmarAssinatura) {
-    btnConfirmarAssinatura.onclick = async () => {
-        fecharModalAssinatura();
+// ── Confirmação de Assinatura ───────────────────────────────────────────────
 
+if (btnConfirmarAssinatura) {
+    btnConfirmarAssinatura.onclick = async function () {
+        fecharModalAssinatura();
         if (!consultaIdGlobal) return;
 
         btnAprovar.disabled = true;
-        btnAprovar.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Gerando Documentos...`;
+        btnAprovar.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Gerando Documentos...';
 
-        const payload = {
+        // Injeta produtos no payload (ProdutoService já tem o estado)
+        var produtosPayload = window.ProdutoService ? window.ProdutoService.getPayload() : [];
+
+        var payload = {
             consulta_id: consultaIdGlobal,
             conteudo_medico: {
-                hda: document.getElementById('hda').value,
-                exame_fisico: document.getElementById('exame_fisico').value,
-                diagnostico: document.getElementById('diagnostico').value,
-                tratamento: document.getElementById('tratamento').value
-            }
+                hda:                  _getVal('hda'),
+                exame_fisico:         _getVal('exame_fisico'),
+                diagnostico:          _getVal('diagnostico'),
+                tratamento:           _getVal('tratamento'),
+                produtos_utilizados:  produtosPayload,
+                curativo:             _coletarCurativo(),
+            },
+            produtos_utilizados: produtosPayload,
         };
 
+        // Salva produtos no Supabase
+        if (window.supabaseClient && produtosPayload.length > 0) {
+            window.supabaseClient
+                .from('consultas')
+                .update({ produtos_utilizados: produtosPayload })
+                .eq('id', consultaIdGlobal)
+                .then(function (r) {
+                    if (r.error) console.error('[app] Falha ao salvar produtos:', r.error);
+                });
+        }
+
         try {
-            // Promessa com timeout de segurança (25s)
-            const authHeaders = await window.getAuthHeaders();
-            const fetchPromise = fetch(WEBHOOK_BASE_URL + "/aprovarConsulta", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    ...authHeaders
-                },
-                body: JSON.stringify(payload)
+            var authHeaders = await window.getAuthHeaders();
+            var fetchPromise = fetch(WEBHOOK_BASE_URL + '/aprovarConsulta', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders),
+                body: JSON.stringify(payload),
             });
 
-            // Se o servidor demorar > 25s, assumimos sucesso otimista e liberamos o PDF
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 25000));
+            var timeoutPromise = new Promise(function (_, reject) {
+                setTimeout(function () { reject(new Error('TIMEOUT')); }, 25000);
+            });
 
-            let res;
+            var res;
             try {
                 res = await Promise.race([fetchPromise, timeoutPromise]);
             } catch (e) {
                 if (e.message === 'TIMEOUT') {
-                    res = { ok: true, json: () => ({ success: true }) };
+                    res = { ok: true, json: function () { return { success: true }; } };
                 } else {
                     throw e;
                 }
             }
 
             if (res.ok) {
-                let result = {};
+                // Registra assinatura digital
                 try {
-                    result = await res.json();
-                } catch (e) {
-                    result = { success: true };
+                    var medicoId = await garantirMedicoId();
+                    await window.AssinaturaService.registrar({
+                        consultaId: consultaIdGlobal,
+                        medicoId:   medicoId,
+                        payload:    payload.conteudo_medico,
+                    });
+                } catch (eAssin) {
+                    console.error('[app] Erro na assinatura:', eAssin);
                 }
 
-                try {
-                    // Etapa 2: Assinatura Dupla (Gravar hash, IP)
-                    let ipOrigem = "0.0.0.0";
-                    try {
-                        const ipReq = await fetch('https://api.ipify.org?format=json');
-                        const ipData = await ipReq.json();
-                        if (ipData && ipData.ip) ipOrigem = ipData.ip;
-                    } catch (e) {}
-
-                    const medicoIdAtivo = await garantirMedicoId();
-                    const textoParaHash = payload.consulta_id + payload.conteudo_medico.diagnostico + payload.conteudo_medico.tratamento + new Date().getTime();
-                    const msgBuffer = new TextEncoder().encode(textoParaHash);
-                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-                    const hashArray = Array.from(new Uint8Array(hashBuffer));
-                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-                    if (window.supabaseClient) {
-                        const { error: errAssinatura } = await window.supabaseClient.from('cicatrize_prontuario_assinaturas').insert({
-                            consulta_id: payload.consulta_id,
-                            medico_id: medicoIdAtivo,
-                            hash_documento: hashHex,
-                            ip_assinatura: ipOrigem,
-                            ambiente: 'cicatrize'
-                        });
-                        
-                        if (errAssinatura && errAssinatura.code !== '23505') {
-                            console.error('Falha ao registrar assinatura de bloqueio', errAssinatura);
-                        }
-
-                        // Auditoria da Assinatura
-                        await window.supabaseClient.from('cicatrize_auditoria_logs').insert({
-                            tipo_evento: 'PRONTUARIO_ASSINADO',
-                            referencia_id: payload.consulta_id,
-                            gerado_por: medicoIdAtivo,
-                            ip_origem: ipOrigem,
-                            metadata: { hash: hashHex }
-                        });
-                    }
-                } catch (eAssinatura) {
-                    console.error("Erro na lógica de Fase 3 (Assinatura):", eAssinatura);
-                }
-
-                document.getElementById('resultadoProntuario').classList.add('hidden');
-                document.getElementById('conclusaoAtendimento').classList.remove('hidden');
-
-                // Gerar URL assinada para o PDF
-                const pdfSignedUrl = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
-
-                const btnPDF = document.getElementById('btnDownloadPDF');
-                if (btnPDF && pdfSignedUrl) {
-                    btnPDF.href = pdfSignedUrl;
-                    btnPDF.target = "_blank";
-                    btnPDF.onclick = (e) => {
-                        if (!btnPDF.href || btnPDF.href.includes('#')) {
-                            e.preventDefault();
-                            showToast("PDF ainda sendo gerado, tente em instantes.", "info");
-                        }
-                    };
-                }
-
-                // --------- INÍCIO: INTEGRAÇÃO FASE 4 (TESTE GOTENBERG) ---------
-                const btnTesteGotenberg = document.getElementById('btnTesteGotenberg');
-                if (btnTesteGotenberg) {
-                    btnTesteGotenberg.onclick = async (e) => {
-                        e.preventDefault();
-                        const oldHtml = btnTesteGotenberg.innerHTML;
-                        btnTesteGotenberg.innerHTML = '<div class="loader-7" style="margin-right:8px"><div class="square"></div></div> Gerando...';
-                        btnTesteGotenberg.disabled = true;
-                        
-                        try {
-                            // Envia o payload para o novo fluxo webhook n8n de teste com template Gotenberg
-                            const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/teste-gotenberg-cicatrize-v2", {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    paciente_nome: document.getElementById('pacienteNome').innerText,
-                                    medico_nome: document.getElementById('medicoNome').innerText.replace("Dr. ", ""),
-                                    hda: payload.conteudo_medico.hda,
-                                    exame_fisico: payload.conteudo_medico.exame_fisico,
-                                    diagnostico: payload.conteudo_medico.diagnostico,
-                                    tratamento: payload.conteudo_medico.tratamento,
-                                    hash_assinatura: "Gerado digitalmente via Sistema" // Hash real está no Supabase guardado
-                                })
-                            });
-                            
-                            if(!resp.ok) throw new Error("Erro na API de PDF");
-                            
-                            const blob = await resp.blob();
-                            const blobUrl = window.URL.createObjectURL(blob);
-                            window.open(blobUrl, '_blank');
-                            showToast("PDF de teste gerado com sucesso!", "success");
-                        } catch (errPDF) {
-                            console.error(errPDF);
-                            showToast("Falha ao gerar o PDF de teste (Gotenberg).", "error");
-                        } finally {
-                            btnTesteGotenberg.innerHTML = oldHtml;
-                            btnTesteGotenberg.disabled = false;
-                        }
-                    };
-                }
-                // --------- FIM: INTEGRAÇÃO FASE 4 (TESTE GOTENBERG) ---------
-
-                // Atualizar badge
-                const badge = document.getElementById('pacienteStatus');
-                if (badge) {
-                    badge.className = "px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-100 uppercase tracking-widest flex items-center gap-1.5";
-                    badge.innerHTML = `<i class="ph-fill ph-check-circle"></i> Finalizado`;
-                }
-
-                showToast("Prontuário assinado com sucesso!");
+                _bloquearFormulario();
+                await _concluirAtendimento(payload);
+                window.showToast('Prontuário assinado com sucesso!');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                // NÃO reabilitar botão para evitar duplo clique
-                return;
             } else {
-                const text = await res.text();
-                throw new Error(`Erro Servidor: ${res.status}`);
+                throw new Error('Erro Servidor: ' + res.status);
             }
 
         } catch (err) {
             console.error(err);
             if (err.message.includes('TIMEOUT') || err.message.length < 50) {
-                showToast("Processo demorou, mas deve finalizar em breve. Verifique o PDF.", "warning");
-                // Força UI de sucesso
-                document.getElementById('resultadoProntuario').classList.add('hidden');
-                document.getElementById('conclusaoAtendimento').classList.remove('hidden');
-                const btnDownloadPDF = document.getElementById('btnDownloadPDF');
-                if (btnDownloadPDF) {
-                    const fallbackUrl = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
-                    if (fallbackUrl) {
-                        btnDownloadPDF.href = fallbackUrl;
-                        btnDownloadPDF.target = "_blank";
-                        btnDownloadPDF.onclick = (e) => {
-                            if (!btnDownloadPDF.href || btnDownloadPDF.href.includes('#')) {
-                                e.preventDefault();
-                                showToast("PDF ainda sendo gerado, tente em instantes.", "info");
-                            }
-                        };
-                    }
-                }
+                window.showToast('Processo demorou, mas deve finalizar em breve.', 'warning');
+                _forcarUiSucesso(payload);
             } else {
-                showToast("Erro ao aprovar: " + err.message, "error");
+                window.showToast('Erro ao aprovar: ' + err.message, 'error');
                 btnAprovar.disabled = false;
-                btnAprovar.textContent = "Tentar Novamente";
+                btnAprovar.textContent = 'Tentar Novamente';
             }
         }
     };
 }
 
-if (btnDescartar) {
-    btnDescartar.onclick = () => {
-        showConfirm("Sair do Atendimento", "Deseja mesmo descartar este atendimento e voltar para a fila?", () => {
-            window.location.href = "medico-dashboard.html";
+// ── Helpers do formulário ───────────────────────────────────────────────────
+
+function _getVal(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+}
+
+function _coletarCurativo() {
+    var proc = (_getVal('curativo_procedimento') || '').trim();
+    var foto = (_getVal('curativo_fototerapia')  || '').trim();
+    var mat  = (_getVal('curativo_materiais')    || '').trim();
+    if (!proc && !foto && !mat) return null;
+    return {
+        procedimento:      proc || null,
+        fototerapia:       foto || null,
+        materiais_listados: mat || null,
+    };
+}
+
+function _bloquearFormulario() {
+    ['hda', 'exame_fisico', 'diagnostico', 'tratamento',
+     'curativo_procedimento', 'curativo_fototerapia', 'curativo_materiais']
+        .forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.readOnly = true;
+            el.classList.add('opacity-70', 'cursor-not-allowed', 'bg-slate-200', 'border-transparent');
+            el.classList.remove('bg-slate-50/50', 'border-slate-200');
         });
+
+    var titleContainer = document.querySelector('#resultadoProntuario .flex.items-center.gap-3 div');
+    if (titleContainer) {
+        titleContainer.innerHTML =
+            '<h3 class="text-xl font-bold text-emerald-800 tracking-tight">Prontuário Assinado e Bloqueado</h3>' +
+            '<p class="text-sm text-emerald-600 font-medium"><i class="ph-bold ph-lock-key"></i> Documento assinado digitalmente.</p>';
+    }
+
+    var iconContainer = document.querySelector('#resultadoProntuario .bg-emerald-100');
+    if (iconContainer) {
+        iconContainer.classList.replace('bg-emerald-100', 'bg-emerald-200');
+        iconContainer.innerHTML = '<i class="ph-fill ph-lock-key text-2xl"></i>';
+    }
+
+    var btnAprovarEl = document.getElementById('btnAprovar');
+    if (btnAprovarEl && btnAprovarEl.parentElement) {
+        btnAprovarEl.parentElement.style.display = 'none';
+    }
+    var btnProdEl = document.getElementById('btnAbrirProdutos');
+    if (btnProdEl) btnProdEl.style.display = 'none';
+}
+
+async function _concluirAtendimento(payload) {
+    document.getElementById('conclusaoAtendimento').classList.remove('hidden');
+
+    var pdfUrl = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
+    var btnPDF = document.getElementById('btnDownloadPDF');
+    if (btnPDF && pdfUrl) {
+        btnPDF.href   = pdfUrl;
+        btnPDF.target = '_blank';
+    }
+
+    var badge = document.getElementById('pacienteStatus');
+    if (badge) {
+        badge.className = 'px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-100 uppercase tracking-widest flex items-center gap-1.5';
+        badge.innerHTML = '<i class="ph-fill ph-check-circle"></i> Finalizado';
+    }
+
+    // Fotos / relatório fotográfico
+    var btnImgPDF = document.getElementById('btnRelatorioImagens');
+    var cId = consultaIdGlobal || payload.consulta_id;
+    var pId = pacienteAtual ? pacienteAtual.id : new URLSearchParams(window.location.search).get('id');
+
+    if (window.fotosConsulta && window.fotosConsulta.length > 0) {
+        window._fotosParaRelatorio        = window.fotosConsulta.slice();
+        window._pacienteNomeParaRelatorio = window._pacienteNomeParaRelatorio || document.getElementById('pacienteNome')?.innerText || 'Paciente';
+        window._medicoNomeParaRelatorio   = window._medicoNomeParaRelatorio   || 'Médico';
+
+        window.showToast(window.fotosConsulta.length + ' foto(s) — salvando relatório...', 'info');
+
+        if (btnImgPDF) {
+            btnImgPDF.classList.remove('hidden');
+            btnImgPDF.removeAttribute('href');
+            btnImgPDF.onclick = function (e) { e.preventDefault(); };
+            btnImgPDF.innerHTML = '<i class="ph ph-spinner animate-spin text-2xl"></i> Salvando...';
+        }
+
+        if (typeof window.enviarFotos === 'function') {
+            try {
+                var mId = await garantirMedicoId();
+                await window.enviarFotos(cId, pId, mId);
+            } catch (e) { console.error('[app] Upload fotos falhou:', e); }
+        }
+
+        try {
+            var storagePath = await _chamarSalvarRelatorioImagens(cId, pId);
+            if (storagePath && btnImgPDF) {
+                var signedUrl = await getSignedUrl('prontuarios_pdf', storagePath);
+                if (signedUrl) {
+                    btnImgPDF.href    = signedUrl;
+                    btnImgPDF.target  = '_blank';
+                    btnImgPDF.onclick = null;
+                    btnImgPDF.innerHTML = '<i class="ph-fill ph-images text-2xl"></i> PDF IMAGENS';
+                }
+            } else if (btnImgPDF) {
+                btnImgPDF.classList.add('hidden');
+            }
+        } catch (e) {
+            console.error('[app] Salvar PDF imagens falhou:', e);
+            if (btnImgPDF) btnImgPDF.classList.add('hidden');
+        }
+    } else {
+        await _chamarExibirBotaoRelatorioImagens(cId);
+    }
+}
+
+async function _forcarUiSucesso(payload) {
+    document.getElementById('resultadoProntuario').classList.add('hidden');
+    document.getElementById('conclusaoAtendimento').classList.remove('hidden');
+    var btnDL = document.getElementById('btnDownloadPDF');
+    if (btnDL) {
+        var url = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
+        if (url) { btnDL.href = url; btnDL.target = '_blank'; }
+    }
+    await _chamarExibirBotaoRelatorioImagens(payload.consulta_id);
+}
+
+// ── Delegação para app-images.js ────────────────────────────────────────────
+
+async function _chamarSalvarRelatorioImagens(consultaId, pacienteId) {
+    if (typeof window.salvarRelatorioImagensNoStorage === 'function') {
+        return window.salvarRelatorioImagensNoStorage(consultaId, pacienteId);
+    }
+    console.warn('[app] window.salvarRelatorioImagensNoStorage não disponível');
+    return null;
+}
+
+async function _chamarExibirBotaoRelatorioImagens(consultaId) {
+    if (typeof window.exibirBotaoRelatorioImagens === 'function') {
+        return window.exibirBotaoRelatorioImagens(consultaId);
+    }
+    console.warn('[app] window.exibirBotaoRelatorioImagens não disponível');
+}
+
+// ── Descartar ────────────────────────────────────────────────────────────────
+
+if (btnDescartar) {
+    btnDescartar.onclick = function () {
+        window.showConfirm(
+            'Sair do Atendimento',
+            'Deseja mesmo descartar este atendimento e voltar para a fila?',
+            function () { window.location.href = 'medico-dashboard.html'; }
+        );
     };
 }

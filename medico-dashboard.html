@@ -11,6 +11,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="auth-guard.js"></script>
   <script src="dark-mode.js"></script>
+  <!-- PDF.js para gerar thumbnails de exames PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="clinica-cicatrize/upload-manager.js"></script>
   <style>
     body { font-family: 'Outfit', sans-serif; }
     .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
@@ -36,6 +39,17 @@
     .filter-bar-enter { animation: slideDown 0.3s ease-out forwards; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     .results-badge { transition: all 0.3s ease; }
+
+    /* Upload Manager — Aba de Imagens */
+    .modal-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+    .modal-tab.active { border-bottom-color: #10b981; color: #059669; font-weight: 800; }
+    .upload-drop-zone { transition: all 0.25s ease; }
+    .upload-item { transition: all 0.3s ease; }
+    .upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    @media (min-width: 640px) { .upload-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+    /* PDF thumbnail canvas */
+    .pdf-thumb-wrap { overflow: hidden; }
+    .pdf-thumb-canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   </style>
 </head>
 
@@ -105,7 +119,7 @@
     </div>
 
     <!-- Search & Filters Bar -->
-    <div class="mb-6 sm:mb-8 filter-bar-enter">
+    <div class="mb-6 sm:mb-8 filter-bar-enter relative z-[100]">
       <!-- Search Input -->
       <div class="relative mb-4">
         <div class="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
@@ -145,13 +159,13 @@
         <!-- Sort + Results -->
         <div class="flex items-center gap-2 sm:gap-3">
           <!-- Sort Dropdown -->
-          <div class="relative" id="sortContainer">
+          <div class="relative" id="sortContainer" style="z-index: 10001;">
             <button onclick="toggleSortMenu()" class="sort-btn flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider hover:text-slate-700 whitespace-nowrap">
               <i class="ph-bold ph-sort-ascending text-sm"></i>
               <span id="sortLabel">Recente</span>
               <i class="ph ph-caret-down text-[10px] text-slate-300"></i>
             </button>
-            <div id="sortMenu" class="hidden absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl border border-slate-100 shadow-xl shadow-slate-200/50 z-30 overflow-hidden animate-in">
+            <div id="sortMenu" class="hidden absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] overflow-hidden animate-in" style="z-index: 10002;">
               <button onclick="setSort('recent')" class="sort-option w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition-colors">
                 <i class="ph-bold ph-clock-countdown text-sm"></i> Mais Recente
               </button>
@@ -177,7 +191,7 @@
     </div>
 
     <!-- Active Patient Cards -->
-    <div id="listaPacientes" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+    <div id="listaPacientes" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 relative z-0 isolate">
       <!-- Skeleton Loading -->
       <div class="bg-white p-8 rounded-3xl border border-white shadow-xl animate-pulse col-span-full h-48 flex flex-col items-center justify-center">
         <div class="w-16 h-16 bg-slate-100 rounded-full mb-4"></div>
@@ -213,31 +227,140 @@
     </footer>
   </main>
 
-  <!-- Modal Histórico Paciente -->
-  <div id="modalHistorico" class="hidden fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:px-4">
+  <!-- Modal Paciente (Histórico + Imagens) -->
+  <div id="modalHistorico" class="hidden fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:px-4" style="touch-action: none;" ontouchstart="event.stopPropagation()">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" onclick="fecharModalHistorico()"></div>
-    <div class="bg-white w-full sm:max-w-2xl rounded-t-[2rem] sm:rounded-[2.5rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.2)] overflow-hidden animate-in relative max-h-[90vh] sm:max-h-[80vh]">
-      <div class="p-5 sm:p-8 lg:p-12">
-        <div class="flex justify-between items-start mb-6 sm:mb-10">
+    <div class="bg-white w-full sm:max-w-2xl rounded-t-[2rem] sm:rounded-[2.5rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.2)] overflow-hidden animate-in relative h-[90dvh] sm:h-[88vh] flex flex-col" style="touch-action: pan-y;">
+      
+      <!-- Header -->
+      <div class="px-5 sm:px-8 lg:px-10 pt-6 sm:pt-8 pb-0 shrink-0">
+        <div class="flex justify-between items-start mb-5">
           <div class="flex-1 min-w-0">
-            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Registro de Atendimentos</p>
-            <h3 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" id="modal-hist-nome">Paciente</h3>
+            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Prontuário do Paciente</p>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate" id="modal-hist-nome">Paciente</h3>
           </div>
           <button onclick="fecharModalHistorico()" class="p-2.5 sm:p-3 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl sm:rounded-2xl transition-all ml-3 shrink-0">
             <i class="ph-bold ph-x text-lg sm:text-xl"></i>
           </button>
         </div>
-        
-        <div id="historicoConteudo" class="space-y-3 sm:space-y-4 max-h-[55vh] sm:max-h-[50vh] overflow-y-auto pr-2 sm:pr-4 custom-scrollbar">
-          <!-- Dynamic history items -->
+
+        <!-- Abas e Ações -->
+        <div class="flex justify-between items-center border-b border-slate-100">
+          <div class="flex gap-0">
+            <button id="tab-btn-historico" onclick="switchModalTab('historico')" 
+              class="modal-tab active px-4 sm:px-6 py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <i class="ph-bold ph-clipboard-text text-sm"></i>
+              <span>Consultas</span>
+            </button>
+            <button id="tab-btn-imagens" onclick="switchModalTab('imagens')"
+              class="modal-tab px-4 sm:px-6 py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <i class="ph-bold ph-images text-sm"></i>
+              <span>Imagens</span>
+              <span id="badge-imagens-count" class="hidden px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">0</span>
+            </button>
+          </div>
+          <div class="pr-4 sm:pr-6 flex items-center">
+            <button id="btn-gerar-consolidado" onclick="gerarRelatorioConsolidado()" class="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-indigo-600 text-white text-[10px] sm:text-xs font-black rounded-lg hover:bg-indigo-700 transition-all uppercase tracking-wider shadow-sm shadow-indigo-200">
+              <i class="ph-bold ph-files text-sm"></i> <span class="hidden sm:inline">Gerar Consolidado</span><span class="sm:hidden">Consolidado</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <!-- Conteúdo das Abas -->
+      <div class="flex-1 relative min-h-0 overflow-y-auto custom-scrollbar" style="overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y;">
+
+        <!-- Aba: Histórico de Consultas -->
+        <div id="tab-historico" class="px-5 sm:px-8 lg:px-10 py-5 sm:py-6">
+          <div id="historicoConteudo" class="space-y-3 sm:space-y-4">
+            <!-- Dynamic history items -->
+          </div>
+        </div>
+
+        <!-- Aba: Imagens & Documentos -->
+        <div id="tab-imagens" class="hidden px-5 sm:px-8 lg:px-10 py-5 sm:py-6">
+          
+          <!-- Drop Zone -->
+          <div id="upload-zona" class="upload-drop-zone border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center mb-4 hover:border-emerald-300 cursor-pointer group">
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-12 h-12 bg-slate-50 group-hover:bg-emerald-50 rounded-2xl flex items-center justify-center transition-colors">
+                <i class="ph-bold ph-cloud-arrow-up text-2xl text-slate-300 group-hover:text-emerald-400 transition-colors"></i>
+              </div>
+              <p class="text-sm font-bold text-slate-400 group-hover:text-emerald-600 transition-colors">Arraste imagens ou PDFs aqui</p>
+              <p class="text-[10px] text-slate-300 font-medium">JPG, PNG, WebP, PDF · Máximo 10MB</p>
+              <button id="upload-btn" type="button"
+                class="mt-1 px-4 py-2 bg-emerald-600 text-white text-[10px] sm:text-xs font-black rounded-xl hover:bg-emerald-700 transition-all uppercase tracking-wider shadow-sm shadow-emerald-200">
+                <i class="ph-bold ph-plus mr-1"></i>Selecionar Arquivo
+              </button>
+              <input id="upload-input" type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.pdf" multiple class="hidden">
+            </div>
+          </div>
+
+          <!-- Status do upload -->
+          <div id="upload-status" class="text-xs text-center mb-3 min-h-[1.25rem]"></div>
+
+          <!-- Grid de thumbnails -->
+          <div id="upload-grid" class="upload-grid">
+            <div class="col-span-full text-center text-slate-300 text-sm py-8">
+              <i class="ph ph-spinner animate-spin text-2xl"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação de Exclusão de Arquivo -->
+  <div id="modalConfirmarExclusao" class="hidden fixed inset-0 z-[2000] flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-md" id="exclusao-backdrop"></div>
+    <div class="relative bg-white rounded-[2rem] shadow-[0_32px_96px_-16px_rgba(0,0,0,0.25)] p-8 w-full max-w-sm animate-in">
+
+      <!-- Ícone de alerta -->
+      <div class="flex justify-center mb-5">
+        <div class="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center">
+          <i class="ph-bold ph-trash text-3xl text-rose-500"></i>
+        </div>
+      </div>
+
+      <!-- Texto -->
+      <h3 class="text-xl font-black text-slate-900 text-center mb-2 tracking-tight">Excluir arquivo?</h3>
+      <p class="text-sm font-bold text-slate-600 text-center mb-1 truncate px-4" id="exclusao-nome-arquivo"></p>
+      <p class="text-xs text-slate-400 text-center mb-7">Esta ação é permanente e não pode ser desfeita.</p>
+
+      <!-- Ações -->
+      <div class="flex gap-3">
+        <button id="exclusao-btn-cancelar"
+          class="flex-1 py-3 bg-slate-100 text-slate-600 font-black text-sm rounded-2xl hover:bg-slate-200 transition-all">
+          Cancelar
+        </button>
+        <button id="exclusao-btn-confirmar"
+          class="flex-1 py-3 bg-rose-600 text-white font-black text-sm rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+          <i class="ph-bold ph-trash text-sm"></i>
+          Excluir
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Progresso Relatório -->
+  <div id="modalProgressoConsolidado" class="hidden fixed inset-0 z-[3000] flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-md"></div>
+    <div class="relative bg-white rounded-[2rem] shadow-[0_32px_96px_-16px_rgba(0,0,0,0.25)] p-8 w-full max-w-sm animate-in flex flex-col items-center text-center">
+      <i class="ph ph-spinner animate-spin text-5xl text-indigo-600 mb-4"></i>
+      <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Gerando Consolidado</h3>
+      <p class="text-sm font-medium text-slate-500 mb-2">Processando histórico e unindo anexos PDF...</p>
+      <p class="text-xs text-slate-400">Isso pode levar alguns segundos.</p>
     </div>
   </div>
 
   <script>
     const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
     const WEBHOOK_HISTORICO = "https://n8n.srv1181762.hstgr.cloud/webhook/consultas_finalizadas"; // URL fix
+    
+    // Estado do modal ativo
+    let _modalPacienteAtual = { id: null, nome: null, uploadIniciado: false };
     
     // Auth Check
     let medicoAtivo = JSON.parse(localStorage.getItem("medico_ativo"));
@@ -270,7 +393,8 @@
         id: medicoDb.id,
         auth_id: session.user.id,
         nome: atual.nome || medicoDb.nome || "Dr(a). Medico",
-        crm: atual.crm || medicoDb.crm || ""
+        crm: atual.crm || medicoDb.crm || "",
+        tipo_clinica: medicoDb.tipo_clinica || atual.tipo_clinica || null
       };
       localStorage.setItem("medico_ativo", JSON.stringify(atual));
       medicoAtivo = atual;
@@ -579,12 +703,32 @@
       }
     }
 
+    let _scrollY = 0;
+
     async function verHistorico(id, nome) {
       const modal = document.getElementById("modalHistorico");
       document.getElementById("modal-hist-nome").innerText = nome;
       const content = document.getElementById("historicoConteudo");
       modal.classList.remove("hidden");
+      
+      // Bloqueio rigoroso de scroll para iOS
+      _scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${_scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      
       content.innerHTML = `<div class="p-12 text-center text-slate-400"><i class="ph ph-spinner animate-spin text-4xl mb-3 text-emerald-500"></i><p>Acessando prontuários...</p></div>`;
+
+      // Resetar estado do modal para o novo paciente
+      _modalPacienteAtual = { id, nome, uploadIniciado: false };
+
+      // Garantir que a aba Consultas está ativa
+      switchModalTab('historico');
+
+      // Atualizar badge de imagens em background
+      _atualizarBadgeImagens(id);
 
       try {
         const url = `${WEBHOOK_HISTORICO}?paciente_id=${id}&t=${Date.now()}`;
@@ -627,14 +771,20 @@
                 <i class="ph-bold ph-file-text text-xs"></i> Prontuário
                </span>`;
 
-          // Botão 2: Relatório de Imagens—mesma lógica do original: campo + fallback underscore
+          // Botão 2: Relatório de Imagens — tenta campo do DB, depois hyphen e underscore
           let imagensReportUrl = null;
           if (c.anexo_imagens_url) {
             imagensReportUrl = await getSignedUrl("prontuarios_pdf", c.anexo_imagens_url);
           }
           if (!imagensReportUrl) {
-            const { data: sd2 } = await supabaseClient.storage.from("prontuarios_pdf").createSignedUrl(c.consulta_id + "_imagens.pdf", 3600);
+            // n8n salva como {id}-imagens.pdf (hífen)
+            const { data: sd2 } = await supabaseClient.storage.from("prontuarios_pdf").createSignedUrl(c.consulta_id + "-imagens.pdf", 3600);
             if (sd2?.signedUrl) imagensReportUrl = sd2.signedUrl;
+          }
+          if (!imagensReportUrl) {
+            // fallback com underscore (padrão antigo)
+            const { data: sd3 } = await supabaseClient.storage.from("prontuarios_pdf").createSignedUrl(c.consulta_id + "_imagens.pdf", 3600);
+            if (sd3?.signedUrl) imagensReportUrl = sd3.signedUrl;
           }
 
           const btnImagens = imagensReportUrl
@@ -645,17 +795,9 @@
             : `<button data-consulta="${c.consulta_id}" data-paciente="${id}"
                  onclick="gerarRelatorioImagens(this.dataset.consulta, this.dataset.paciente, this)"
                  class="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 text-[9px] font-black rounded-lg hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-wider border border-emerald-200">
-                <i class="ph-bold ph-images text-xs"></i> Imagens
+                <i class="ph-bold ph-images text-xs"></i> Gerar Imagens
                </button>`;
 
-
-          // Botão 3: Merge (PDF combinado) — sempre acessível via geração
-          const mergeUrl = `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/${c.consulta_id}-merge.pdf`;
-          const btnMerge = `<button data-consulta="${c.consulta_id}" data-paciente="${id}" data-pdf="${pdfUrl || ''}" data-imagens="${c.anexo_imagens_url || ''}"
-               onclick="gerarMergePDF(this.dataset.consulta, this.dataset.paciente, this)"
-               class="flex items-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 text-[9px] font-black rounded-lg hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-wider border border-indigo-200">
-              <i class="ph-bold ph-files text-xs"></i> Merge
-             </button>`;
 
           const div = document.createElement("div");
           div.className = "p-5 bg-slate-50 rounded-2xl hover:bg-white border border-transparent hover:border-emerald-100 hover:shadow-lg transition-all group";
@@ -673,7 +815,6 @@
               <div class="flex items-center gap-1.5 flex-wrap justify-end">
                 ${btnProntuario}
                 ${btnImagens}
-                ${btnMerge}
               </div>
             </div>
             ${audioHtml}
@@ -688,11 +829,66 @@
 
     function fecharModalHistorico() {
       document.getElementById("modalHistorico").classList.add("hidden");
+      
+      // Restaurar scroll
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+      window.scrollTo(0, _scrollY);
+      
+      // Resetar abas para próxima abertura
+      _modalPacienteAtual = { id: null, nome: null, uploadIniciado: false };
+    }
+
+    // Alternar abas do modal
+    function switchModalTab(aba) {
+      const tabHistorico = document.getElementById('tab-historico');
+      const tabImagens = document.getElementById('tab-imagens');
+      const btnHistorico = document.getElementById('tab-btn-historico');
+      const btnImagens = document.getElementById('tab-btn-imagens');
+
+      if (aba === 'historico') {
+        tabHistorico.classList.remove('hidden');
+        tabImagens.classList.add('hidden');
+        btnHistorico.classList.add('active');
+        btnImagens.classList.remove('active');
+      } else {
+        tabHistorico.classList.add('hidden');
+        tabImagens.classList.remove('hidden');
+        btnHistorico.classList.remove('active');
+        btnImagens.classList.add('active');
+
+        // Inicializar upload apenas uma vez por abertura do modal
+        if (!_modalPacienteAtual.uploadIniciado && _modalPacienteAtual.id) {
+          _modalPacienteAtual.uploadIniciado = true;
+          const medicoLocal = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+          UploadManager.initUploadZone(_modalPacienteAtual.id, medicoLocal.id);
+        }
+      }
+    }
+
+    // Atualiza badge de contagem de imagens na aba
+    async function _atualizarBadgeImagens(pacienteId) {
+      try {
+        const imgs = await UploadManager.listarImagens(pacienteId);
+        const badge = document.getElementById('badge-imagens-count');
+        if (badge) {
+          if (imgs.length > 0) {
+            badge.textContent = imgs.length;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      } catch (e) { /* sem crash */ }
     }
 
     // Expõe verHistorico globalmente para os botões nos cards
     window.verHistorico = verHistorico;
     window.fecharModalHistorico = fecharModalHistorico;
+    window.switchModalTab = switchModalTab;
 
     // Gera/regenera o PDF de relatório de imagens via n8n
     window.gerarRelatorioImagens = async function(consulta_id, paciente_id, btn) {
@@ -706,7 +902,9 @@
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ consulta_id, paciente_id })
         });
-        if (!resp.ok) throw new Error('Falha ao gerar relatório');
+        if (!resp.ok) {
+          throw new Error('Não há imagens anexadas a esta consulta.');
+        }
         const result = await resp.json();
         const pdfUrl = result.pdf_url || result.url;
         if (pdfUrl) {
@@ -718,55 +916,84 @@
         } else {
           btn.innerHTML = old;
           btn.disabled = false;
-          alert('Relatório gerado, mas URL não recebida. Tente recarregar a página.');
+          if (window.UploadManager) UploadManager.showToast('error', 'Relatório gerado, mas URL não recebida. Tente novamente.', 5000);
+          else alert('Relatório gerado, mas URL não recebida. Tente recarregar a página.');
         }
       } catch(e) {
         console.error(e);
         btn.innerHTML = old;
         btn.disabled = false;
-        alert('Erro ao gerar relatório de imagens: ' + e.message);
+        
+        let msg = e.message || 'Erro ao processar imagens.';
+        if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network error') || msg.toLowerCase().includes('fetch')) {
+          msg = 'Não há imagens ou ocorreu um erro de conexão. Verifique a aba de imagens.';
+        } else if (msg.includes('Não há imagens')) {
+          msg = 'Nenhuma imagem clínica encontrada para este atendimento.';
+        }
+
+        if (window.UploadManager) UploadManager.showToast('error', msg, 6000);
+        else alert(msg);
       }
     };
 
-    // Gera PDF de Merge (prontuário + imagens) via n8n
-    window.gerarMergePDF = async function(consulta_id, paciente_id, btn) {
-      const old = btn.innerHTML;
-      btn.innerHTML = '<i class="ph ph-spinner animate-spin text-xs"></i> Gerando...';
-      btn.disabled = true;
+
+    window.gerarRelatorioConsolidado = async function() {
+      const paciente_id = _modalPacienteAtual.id;
+      if (!paciente_id) {
+        if (window.UploadManager) UploadManager.showToast('error', 'Paciente não identificado.', 4000);
+        return;
+      }
+      const medico_id = medicoAtivo.id;
+      const modalProgresso = document.getElementById("modalProgressoConsolidado");
+      modalProgresso.classList.remove("hidden");
+
       try {
         const authHeaders = typeof window.getAuthHeaders === 'function' ? await window.getAuthHeaders() : {};
-        const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/mergeProntuarioImagens", {
+
+        // Aguarda a resposta do n8n que já inclui pdf_path no Respond Success
+        const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/mergeRelatorioPDF", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ consulta_id, paciente_id })
+          body: JSON.stringify({ paciente_id, medico_id })
         });
-        if (!resp.ok) throw new Error(`Status ${resp.status}`);
-        const result = await resp.json();
-        const pdfUrl = result.pdf_url || result.merge_url || result.url;
-        if (pdfUrl) {
-          btn.outerHTML = `<a href="${pdfUrl}" target="_blank"
-            class="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-[9px] font-black rounded-lg hover:bg-indigo-700 transition-all uppercase tracking-wider shadow-sm shadow-indigo-200">
-            <i class="ph-bold ph-files text-xs"></i> Merge
-          </a>`;
+
+        modalProgresso.classList.add("hidden");
+
+        const rawText = await resp.text();
+        console.log('[Consolidado] resp:', resp.status, rawText.substring(0, 200));
+
+        let result = {};
+        try { result = JSON.parse(rawText); } catch(e) {}
+
+        if (result.success && result.pdf_path) {
+          const pdfUrl = await getSignedUrl("prontuarios_pdf", result.pdf_path);
+          if (pdfUrl) {
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            if (window.UploadManager) UploadManager.showToast('success', 'Relatório Consolidado gerado com sucesso!', 5000);
+          } else {
+            if (window.UploadManager) UploadManager.showToast('error', 'Relatório gerado, mas não foi possível abrir o documento.', 5000);
+          }
         } else {
-          btn.innerHTML = old; btn.disabled = false;
-          alert('Merge gerado, mas URL não recebida. Tente novamente.');
+          const msg = result.error || (!rawText ? 'Sem registros para consolidar.' : 'Falha ao gerar relatório.');
+          if (window.UploadManager) UploadManager.showToast('error', msg, 6000);
         }
+
       } catch(e) {
-        console.error(e); btn.innerHTML = old; btn.disabled = false;
-        alert('Erro ao gerar merge: ' + e.message);
+        modalProgresso.classList.add("hidden");
+        console.error('[Consolidado] Erro:', e);
+        const errMsg = e.message || 'Falha na comunicação com o servidor.';
+        if (window.UploadManager) UploadManager.showToast('error', errMsg, 8000);
+        else alert('Erro: ' + errMsg);
       }
     };
 
     window.atenderPaciente = function (id, nome, convenio) {
-      if (window.speechSynthesis) {
-        const msg = new SpeechSynthesisUtterance(`Paciente ${nome}, favor dirigir-se ao consultório.`);
-        msg.lang = 'pt-BR';
-        window.speechSynthesis.speak(msg);
-      }
-      setTimeout(() => {
-        window.location.href = `atendimento.html?paciente=${encodeURIComponent(nome)}&id=${id}&convenio=${encodeURIComponent(convenio)}`;
-      }, 1200);
+      window.location.href = `atendimento.html?paciente=${encodeURIComponent(nome)}&id=${id}&convenio=${encodeURIComponent(convenio)}`;
     };
 
     document.addEventListener("DOMContentLoaded", carregarPacientes);

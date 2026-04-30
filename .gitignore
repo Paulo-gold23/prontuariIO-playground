@@ -1,0 +1,39 @@
+# ==========================================
+# Prontuário IO — .gitignore (Public Repo)
+# ==========================================
+
+# Arquivos internos de agente AI
+.agent/
+AGENTS.md
+
+# Documentação interna / planos de produto
+PLAN-*.md
+ROADMAP.md
+N8N_WEBHOOK_SECURITY.md
+
+# Banco de dados e migrations
+database/
+*.sql
+
+# Documentos internos
+docs/
+
+# Workflows n8n (configuração sensível de infraestrutura)
+*.json
+!package.json
+
+# Node / dependências locais (caso futuramente usado)
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
