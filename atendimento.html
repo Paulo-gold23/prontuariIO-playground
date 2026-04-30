@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atendimento Médico - prontuar.IO</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Supabase SDK e Auth Guard -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="auth-guard.js"></script>
+    <script src="dark-mode.js"></script>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-primary: #10b981; /* emerald-500 */
+            --brand-secondary: #0ea5e9;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        h1,
+        h2,
+        h3,
+        .font-heading {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-gradient {
+            background-size: 200% auto;
+            transition: 0.5s;
+        }
+
+        .btn-gradient:hover {
+            background-position: right center;
+        }
+
+        /* ── IMAGENS ── */
+        .foto-thumb { position:relative; overflow:hidden; }
+        .foto-thumb img { transition: transform 0.2s; }
+        .foto-thumb:hover img { transform: scale(1.05); }
+        @keyframes slideUpModal { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spinCam { to { transform:rotate(360deg); } }
+        #modalCameraBox { animation: slideUpModal 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        #cameraLoadingSpinner .cam-spin { animation: spinCam 0.75s linear infinite; }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-down {
+            animation: fadeInDown 0.5s ease-out forwards;
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Recording Visualizer */
+        .visualizer-container {
+            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); /* emerald shadow */
+        }
+
+        #conclusaoAtendimento {
+            animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Modal & Toasts */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            min-width: 300px;
+            padding: 16px 20px;
+            border-radius: 16px;
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #f1f5f9;
+            animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .custom-ui-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        /* Loading 7 - Adapted from CodePen Manoz/kyWvQw */
+        .loader-7 {
+            display: inline-flex;
+            align-items: center;
+            width: 32px;
+            height: 10px;
+            position: relative;
+        }
+
+        .loader-7 .square {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: linear-gradient(135deg, #6366f1, #818cf8);
+            animation: loadingG 1.5s cubic-bezier(0.17, 0.37, 0.43, 0.67) infinite;
+        }
+
+        @keyframes loadingG {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            50% {
+                transform: translate(22px, 0) rotate(360deg);
+            }
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           MODAL PRODUTOS — LIGHT MODE (base)
+           ═══════════════════════════════════════════════════════ */
+
+        /* Overlay */
+        #modalProdutosOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(6px);
+            z-index: 10050;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0;
+        }
+        @media (min-width: 640px) {
+            #modalProdutosOverlay { align-items: center; padding: 20px; }
+        }
+
+        /* Animação de entrada */
+        @keyframes slideUpProd {
+            from { opacity: 0; transform: translateY(32px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        #modalProdutosBox {
+            animation: slideUpProd 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+
+        /* Card item de produto — LIGHT */
+        .produto-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            background: #f8fafc;
+            transition: background 0.15s, border-color 0.15s;
+            cursor: pointer;
+        }
+        .produto-item:hover {
+            border-color: #6ee7b7;
+            background: #f0fdf4;
+        }
+        .produto-item.selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        /* Texto do nome do produto — LIGHT */
+        .prod-nome {
+            color: #1e293b;
+        }
+        .produto-item.selected .prod-nome {
+            color: #065f46;
+        }
+
+        /* Botões +/- — LIGHT */
+        .prod-btn {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .prod-btn:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* Quantidade — LIGHT */
+        .prod-qty {
+            color: #059669;
+        }
+
+        /* Chips de produtos confirmados — LIGHT */
+        .produto-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #065f46;
+            white-space: nowrap;
+        }
+        .produto-chip .chip-qty {
+            background: #10b981;
+            color: white;
+            border-radius: 100px;
+            padding: 1px 6px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           MODAL PRODUTOS — DARK MODE (html.dark)
+           ═══════════════════════════════════════════════════════ */
+
+        /* Card box do modal */
+        html.dark #modalProdutosBox {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+        }
+        /* Todos os textos dentro do box — base legível */
+        html.dark #modalProdutosBox {
+            color: #e2e8f0 !important;
+        }
+        /* Header: título e subtítulo */
+        html.dark #modalProdutosBox p {
+            color: #e2e8f0 !important;
+        }
+        html.dark #modalProdutosBox p + p {
+            color: #94a3b8 !important;
+        }
+        /* Botão fechar X */
+        html.dark #modalProdutosBox .bg-slate-100 {
+            background: #334155 !important;
+            color: #94a3b8 !important;
+        }
+        html.dark #modalProdutosBox .bg-slate-100:hover {
+            background: #475569 !important;
+            color: #e2e8f0 !important;
+        }
+        /* Área scrollável */
+        html.dark #modalProdutosBox .overflow-y-auto {
+            background: #1e293b !important;
+        }
+        /* Inputs de busca e manual */
+        html.dark #produtosBusca,
+        html.dark #produtoManualInput {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        /* Separadores */
+        html.dark #sepProd1,
+        html.dark #sepProd2 {
+            background: #334155 !important;
+        }
+        /* Footer */
+        html.dark #modalProdutosFooter {
+            background: #1e293b !important;
+            border-top-color: #334155 !important;
+        }
+        html.dark #modalProdutosFooter button.bg-slate-100 {
+            background: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        html.dark #modalProdutosFooter button.bg-slate-100:hover {
+            background: #475569 !important;
+        }
+
+        /* Card item — DARK: fundo diferente do modal para contraste */
+        html.dark .produto-item {
+            background: #263147 !important;
+            border-color: #3e5068 !important;
+        }
+        html.dark .produto-item:hover {
+            background: #1a3a28 !important;
+            border-color: #10b981 !important;
+        }
+        html.dark .produto-item.selected {
+            background: #153524 !important;
+            border-color: #10b981 !important;
+        }
+
+        /* Nome do produto — DARK: branco legível */
+        html.dark .prod-nome {
+            color: #f1f5f9 !important;
+        }
+        html.dark .produto-item.selected .prod-nome {
+            color: #6ee7b7 !important;
+        }
+
+        /* Checkbox border não selecionado — mais visível */
+        html.dark .prod-check.border-slate-300 {
+            border-color: #64748b !important;
+        }
+
+        /* Botões +/- — DARK */
+        html.dark .prod-btn {
+            background: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        html.dark .prod-btn:hover {
+            background: #475569 !important;
+            color: #f1f5f9 !important;
+        }
+
+        /* Quantidade — DARK */
+        html.dark .prod-qty {
+            color: #34d399 !important;
+        }
+
+        /* Seção de produtos na página — DARK */
+        html.dark #secaoProdutos {
+            background: rgba(16,185,129,0.04) !important;
+            border-color: rgba(16,185,129,0.2) !important;
+        }
+        html.dark #produtosVazioHint {
+            color: #64748b !important;
+        }
+        html.dark #produtosChipsContainer {
+            background: #0f172a !important;
+            border-color: rgba(16,185,129,0.2) !important;
+        }
+        /* Chips — DARK */
+        html.dark .produto-chip {
+            background: rgba(16,185,129,0.12) !important;
+            border-color: rgba(16,185,129,0.3) !important;
+            color: #6ee7b7 !important;
+        }
+        html.dark .produto-chip .chip-qty {
+            background: #10b981 !important;
+            color: #fff !important;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           SEÇÃO CURATIVO — CLÍNICA CICATRIZE
+           ═══════════════════════════════════════════════════════ */
+        #secaoCurativo {
+            border-color: #5eead4;
+            background: rgba(20, 184, 166, 0.04);
+            transition: all 0.3s;
+        }
+        #secaoCurativo .curativo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #ccfbf1;
+            border: 1px solid #99f6e4;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #0f766e;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        /* DARK — Seção Curativo */
+        html.dark #secaoCurativo {
+            background: rgba(20,184,166,0.06) !important;
+            border-color: rgba(20,184,166,0.25) !important;
+        }
+        html.dark #secaoCurativo textarea {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        html.dark #secaoCurativo label {
+            color: #94a3b8 !important;
+        }
+        html.dark #secaoCurativo .curativo-badge {
+            background: rgba(20,184,166,0.15) !important;
+            border-color: rgba(20,184,166,0.3) !important;
+            color: #5eead4 !important;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen py-10 px-4 sm:px-6 overflow-x-hidden">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header / Navigation -->
+        <header class="flex justify-between items-center mb-10 animate-fade-in-down">
+            <a href="medico-dashboard.html"
+                class="flex items-center gap-2 text-emerald-600 font-bold hover:text-emerald-700 transition-colors group">
+                <div
+                    class="p-2 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:shadow-md group-active:scale-95 transition-all">
+                    <i class="ph-bold ph-arrow-left"></i>
+                </div>
+                <span><span class="hidden sm:inline">Voltar para Fila</span><span class="sm:hidden">Voltar</span></span>
+            </a>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Atendimento Ativo</p>
+                    <p class="text-sm font-bold text-slate-700" id="medicoNome">Dr. Luciano</p>
+                </div>
+                <button id="theme-toggle"
+                    class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors mx-2"
+                    title="Modo Noturno">
+                    <i class="ph-bold ph-moon text-xl"></i>
+                </button>
+                <div class="w-10 h-10 rounded-xl bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
+                    <img id="medicoAvatar" src="https://ui-avatars.com/api/?name=Medico&background=6366f1&color=fff" alt="Médico">
+                </div>
+            </div>
+        </header>
+
+        <div
+            class="bg-white rounded-[32px] shadow-2xl shadow-emerald-100/50 border border-slate-100 overflow-hidden animate-fade-in-up">
+
+            <!-- Patient Header Info -->
+            <div class="p-8 sm:p-10 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div class="flex items-center gap-5">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-emerald-100">
+                            <i class="ph-fill ph-user"></i>
+                        </div>
+                        <div>
+                            <h1 id="pacienteNome" class="text-3xl font-black text-slate-900 tracking-tight">
+                                Carregando...</h1>
+                            <div class="flex items-center gap-3 mt-1.5">
+                                <span id="pacienteStatus"
+                                    class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-100 uppercase tracking-widest flex items-center gap-1.5">
+                                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                    Em Atendimento
+                                </span>
+                                <span id="pacienteConvenio"
+                                    class="text-sm font-bold text-slate-400 uppercase tracking-wider">Particular</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- BOTÃO CÂMERA -->
+                        <button onclick="capturarFoto()"
+                            class="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95">
+                            <i class="ph-fill ph-camera text-lg"></i>
+                            Registrar Foto
+                        </button>
+                        <button id="btnNovoPaciente"
+                            class="px-5 py-2.5 bg-white border border-emerald-100 text-emerald-600 text-sm font-bold rounded-xl hover:border-emerald-300 hover:shadow-sm transition-all flex items-center gap-2 active:scale-95">
+                            <i class="ph-bold ph-plus-circle text-lg"></i>
+                            Novo Paciente
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid de Fotos (oculto inicialmente) -->
+                <div id="fotosContainer" class="hidden mt-6 pt-5 border-t border-slate-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-images text-indigo-500 text-lg"></i>
+                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Fotos da Consulta</span>
+                            <span id="fotosContador" class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-black rounded-full">0 foto(s)</span>
+                        </div>
+                        <button onclick="capturarFoto()"
+                            class="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors">
+                            <i class="ph-bold ph-plus"></i> Adicionar
+                        </button>
+                    </div>
+                    <div id="fotosGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2"></div>
+                    <p class="text-[10px] text-slate-400 mt-2 font-medium">
+                        <i class="ph-fill ph-lock text-emerald-400"></i>
+                        As fotos serão incluídas em um PDF separado com timestamp ao finalizar o atendimento.
+                    </p>
+                </div>
+            </div>
+
+            <div class="p-8 sm:p-12">
+
+                <!-- Área de Gravação -->
+                <div id="gravacaoContainer" class="flex flex-col items-center justify-center py-4">
+                    <!-- Visualizer -->
+                    <div
+                        class="visualizer-container w-full h-24 bg-slate-50 rounded-2xl mb-8 flex items-center justify-center overflow-hidden relative border border-slate-100 shadow-inner">
+                        <canvas id="waveformCanvas" class="w-full h-full opacity-60"></canvas>
+                        <div
+                            class="absolute inset-0 flex items-center justify-center text-slate-200 pointer-events-none">
+                            <i class="ph-fill ph-wave-sine text-5xl opacity-50"></i>
+                        </div>
+                    </div>
+
+                    <!-- Timer -->
+                    <div id="timer"
+                        class="text-6xl font-mono font-bold text-slate-700 mb-4 tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-slate-700 to-slate-500">
+                        00:00
+                    </div>
+
+                    <!-- Status Text -->
+                    <div id="status"
+                        class="text-sm font-semibold text-slate-500 mb-10 py-1.5 px-4 rounded-full bg-slate-100 border border-slate-200/50 flex items-center gap-2">
+                        <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                        <span id="statusText">Aguardando início...</span>
+                    </div>
+
+                    <!-- Botão de Microfone Central -->
+                    <div id="controlPrincipal" class="flex items-center gap-6">
+                        <!-- Botão Pausar (Hidden by default) -->
+                        <button id="btnPausar"
+                            class="hidden w-16 h-16 flex items-center justify-center rounded-2xl bg-white border-2 border-slate-100 text-slate-400 hover:text-emerald-600 hover:border-emerald-100 transition-all active:scale-95 shadow-sm">
+                            <i id="iconPausar" class="ph-fill ph-pause text-3xl"></i>
+                        </button>
+
+                        <div class="relative group">
+                            <div
+                                class="absolute -inset-4 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all">
+                            </div>
+                            <button id="btnGravar"
+                                class="relative w-28 h-28 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-2xl shadow-emerald-200 hover:shadow-emerald-300 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all duration-300 z-10">
+                                <i id="iconGravar" class="ph-fill ph-microphone text-5xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Placeholder para manter simetria -->
+                        <div id="spacerPausar" class="w-16 h-16 hidden"></div>
+                    </div>
+
+                    <!-- Ações Pós-Gravação (Hidden by default) -->
+                    <div id="acoesPosGrava" class="hidden w-full space-y-8 animate-fade-in-up">
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="w-full max-w-md p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <audio id="playerAudio" controls class="w-full h-10"></audio>
+                            </div>
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Ouça antes de
+                                processar</p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-lg mx-auto">
+                            <button id="btnRecomecar"
+                                class="px-6 py-4 rounded-2xl border-2 border-slate-100 text-slate-500 font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center justify-center gap-2">
+                                <i class="ph-bold ph-trash-simple text-xl"></i> Gravar Outro
+                            </button>
+                            <button id="btnProcessarIA"
+                                class="flex-1 px-10 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 hover:shadow-emerald-200 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-3">
+                                <i class="ph-fill ph-sparkle text-2xl"></i> ANALISAR COM IA
+                            </button>
+                        </div>
+                    </div>
+
+                    <p id="hintText" class="mt-8 text-sm font-bold text-slate-400 uppercase tracking-widest">Clique para
+                        começar</p>
+                </div>
+
+                <!-- Resultado Prontuário (Hidden until processed) -->
+                <div id="resultadoProntuario" class="hidden space-y-10 animate-fade-in-up">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                                <i class="ph-fill ph-magic-wand text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-800 tracking-tight">Prontuário Estruturado pela
+                                    IA</h3>
+                                <p class="text-sm text-slate-500 font-medium">Revise e edite as informações abaixo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="group">
+                            <label
+                                class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">História
+                                da Doença Atual (HDA)</label>
+                            <textarea id="hda" rows="4"
+                                class="w-full rounded-2xl border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label
+                                    class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Exame
+                                    Físico</label>
+                                <textarea id="exame_fisico" rows="4"
+                                    class="w-full rounded-2xl border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"></textarea>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Diagnóstico
+                                    / Hipótese</label>
+                                <textarea id="diagnostico" rows="4"
+                                    class="w-full rounded-2xl border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"></textarea>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Tratamento
+                                e Conduta</label>
+                            <textarea id="tratamento" rows="4"
+                                class="w-full rounded-2xl border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"></textarea>
+                        </div>
+
+                        <!-- ── CURATIVO (Clínica Cicatrize) — oculto por padrão, ativado via JS ── -->
+                        <div id="secaoCurativo" class="hidden rounded-2xl border border-dashed p-5">
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="p-1.5 bg-teal-100 text-teal-600 rounded-lg">
+                                    <i class="ph-fill ph-bandaids text-base"></i>
+                                </div>
+                                <label class="text-xs font-black text-slate-500 uppercase tracking-[0.15em]">Relatório de Curativo</label>
+                                <span class="curativo-badge"><i class="ph-fill ph-seal-check"></i>Cicatrize</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Procedimento do Curativo</label>
+                                    <textarea id="curativo_procedimento" rows="4"
+                                        class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"
+                                        placeholder="Descreva a higienização, limpeza da ferida, cobertura utilizada..."></textarea>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Laserterapia / PDT</label>
+                                        <textarea id="curativo_fototerapia" rows="3"
+                                            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"
+                                            placeholder="Azul de metileno, laser V, joules, pontos..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Materiais Citados no Curativo</label>
+                                        <textarea id="curativo_materiais" rows="3"
+                                            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-4 px-5 text-slate-700 text-base leading-relaxed transition-all"
+                                            placeholder="SF 0,9%, espuma SKINLONFOAM, luvas, gases, URGO CLEAN Ag..."></textarea>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-teal-600 font-semibold">
+                                    <i class="ph-fill ph-info"></i>
+                                    Os materiais listados aqui complementam os Produtos Utilizados selecionados via checklist.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- ── PRODUTOS UTILIZADOS ── -->
+                        <div id="secaoProdutos" class="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/30 p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                                        <i class="ph-fill ph-first-aid-kit text-base"></i>
+                                    </div>
+                                    <label class="text-xs font-black text-slate-500 uppercase tracking-[0.15em]">Produtos Utilizados</label>
+                                    <span id="produtosBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">0</span>
+                                </div>
+                                <button id="btnAbrirProdutos" type="button"
+                                    class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-100 active:scale-95 transition-all">
+                                    <i class="ph-bold ph-plus-circle"></i>
+                                    Selecionar Produtos
+                                </button>
+                            </div>
+
+                            <!-- Campo somente leitura - chips dos produtos selecionados -->
+                            <div id="produtosSelecionadosDisplay" class="hidden">
+                                <div id="produtosChipsContainer" class="flex flex-wrap gap-2 p-3 bg-white/80 rounded-xl border border-emerald-100 min-h-[44px]"></div>
+                                <p class="text-[10px] text-slate-400 font-semibold mt-2">
+                                    <i class="ph-fill ph-lock text-emerald-400"></i>
+                                    Produtos confirmados — somente leitura. Clique em "Selecionar Produtos" para editar antes de assinar.
+                                </p>
+                            </div>
+                            <p id="produtosVazioHint" class="text-xs text-slate-400 font-medium text-center py-2">
+                                Nenhum produto selecionado ainda.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8">
+                        <button id="btnDescartar"
+                            class="px-6 py-4 rounded-2xl border-2 border-slate-100 text-slate-500 font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all">
+                            Descartar
+                        </button>
+                        <button id="btnAprovar"
+                            class="flex-1 sm:flex-none px-12 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 hover:shadow-emerald-200 hover:-translate-y-0.5 transition-all">
+                            Finalizar e Assinar Prontuário
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conclusão do Atendimento (Hidden) -->
+                <div id="conclusaoAtendimento" class="hidden py-12 text-center animate-fade-in-up">
+                    <div
+                        class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                        <i class="ph-fill ph-check-circle text-6xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-black text-slate-900 mb-3 tracking-tight">Atendimento Finalizado!</h3>
+                    <p class="text-slate-500 mb-10 max-w-md mx-auto font-medium text-lg">O prontuário foi gerado com
+                        sucesso e o paciente foi removido da fila ativa.</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                        <!-- PDF Prontuário (sempre) -->
+                        <a id="btnDownloadPDF" href="#"
+                            class="px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
+                            <i class="ph-fill ph-file-pdf text-2xl"></i> PRONTUÁRIO PDF
+                        </a>
+
+                        <!-- PDF Imagens (só aparece se tiver fotos) -->
+                        <a id="btnRelatorioImagens" href="#"
+                            class="hidden px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
+                            <i class="ph-fill ph-images text-2xl"></i> PDF IMAGENS
+                        </a>
+
+                        <a href="medico-dashboard.html"
+                            class="px-8 py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
+                            Voltar para Fila <i class="ph-bold ph-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-16 text-center text-slate-400 text-sm font-medium space-y-2">
+            <p class="flex items-center justify-center gap-1.5"><i class="ph-fill ph-seal-check text-emerald-500"></i> Software Registrado INPI: BR512026001957-5</p>
+            <p>&copy; 2026 prontuar.IO &bull; O futuro do prontuário médico</p>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmOverlay" class="custom-ui-overlay">
+        <div class="bg-white rounded-[24px] p-8 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                <i class="ph-fill ph-warning-circle text-4xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 text-center mb-2" id="confirmTitle">Confirmar Ação</h3>
+            <p class="text-slate-500 text-center mb-8" id="confirmMessage">Deseja realmente prosseguir?</p>
+            <div class="flex gap-3">
+                <button id="confirmCancel"
+                    class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all">Cancelar</button>
+                <button id="confirmOk"
+                    class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">Sim,
+                    prosseguir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação e Assinatura Legal -->
+    <div id="modalAssinaturaLegal" class="custom-ui-overlay">
+        <div class="bg-white rounded-[28px] p-8 sm:p-10 max-w-lg w-full shadow-2xl animate-fade-in-up relative">
+            <!-- Close button -->
+            <button id="btnFecharModalAssinatura" class="absolute top-4 right-4 p-2 rounded-xl text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+
+            <!-- Icon -->
+            <div class="w-20 h-20 bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600 rounded-[1.25rem] flex items-center justify-center mb-6 mx-auto shadow-inner">
+                <i class="ph-fill ph-seal-check text-5xl"></i>
+            </div>
+
+            <!-- Title -->
+            <h3 class="text-2xl font-black text-slate-900 text-center mb-2 tracking-tight">Confirmar e Assinar Prontuário</h3>
+            <p class="text-sm text-slate-400 text-center mb-8 font-medium">Leia atentamente a declaração abaixo antes de prosseguir.</p>
+
+            <!-- Declaration Box -->
+            <div class="bg-slate-50 rounded-2xl border border-slate-100 p-5 sm:p-6 mb-6">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-slate-400 border border-slate-200 shrink-0 mt-0.5">
+                        <i class="ph-bold ph-scales text-base"></i>
+                    </div>
+                    <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Declaração de Responsabilidade Médica</p>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed">
+                    Declaro que <strong class="text-slate-800">li integralmente</strong> o conteúdo do prontuário gerado 
+                    por inteligência artificial, realizei as <strong class="text-slate-800">edições necessárias</strong> e confirmo que as informações 
+                    contidas neste documento estão <strong class="text-slate-800">corretas e de acordo</strong> com o atendimento realizado. 
+                    Assumo total <strong class="text-slate-800">responsabilidade clínica e legal</strong> pelo conteúdo final deste prontuário.
+                </p>
+            </div>
+
+            <!-- Checkbox Agreement -->
+            <label id="labelAcordoAssinatura" class="flex items-start gap-3 p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-300 transition-all cursor-pointer mb-8 group select-none">
+                <input type="checkbox" id="checkboxAcordo" class="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer shrink-0">
+                <span class="text-sm text-slate-600 font-medium leading-relaxed group-hover:text-slate-800 transition-colors">
+                    Eu, <strong id="nomeAssinante" class="text-slate-900">Dr(a). Médico</strong>, confirmo que li, revisei e estou de acordo 
+                    com todo o conteúdo deste prontuário.
+                </span>
+            </label>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button id="btnCancelarAssinatura"
+                    class="flex-1 py-3.5 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
+                    Cancelar
+                </button>
+                <button id="btnConfirmarAssinatura" disabled
+                    class="flex-1 py-3.5 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-100 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:bg-emerald-700 hover:shadow-emerald-200">
+                    <i class="ph-fill ph-pen-nib text-lg"></i>
+                    Assinar Prontuário
+                </button>
+            </div>
+
+            <!-- Timestamp -->
+            <p id="timestampAssinatura" class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-5"></p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MODAL CÂMERA — HTML estático (dark mode via Tailwind dark:)
+         Controlado por app-images.js: capturarFoto() / fecharModalCamera()
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="modalCameraOverlay"
+         class="hidden fixed inset-0 z-[10001] flex items-end sm:items-center justify-center sm:p-4"
+         style="background:rgba(15,23,42,0.55);backdrop-filter:blur(8px);">
+
+        <!-- Backdrop click-to-close -->
+        <div class="absolute inset-0" onclick="fecharModalCamera()"></div>
+
+        <!-- Card principal -->
+        <div id="modalCameraBox"
+             class="relative z-10 w-full max-w-lg overflow-hidden flex flex-col
+                    bg-white dark:bg-slate-800
+                    border border-slate-100 dark:border-slate-700
+                    rounded-t-[2rem] sm:rounded-[2rem]
+                    shadow-[0_-8px_48px_-8px_rgba(0,0,0,0.18)] sm:shadow-[0_32px_128px_-16px_rgba(0,0,0,0.25)]"
+             style="font-family:'Outfit',system-ui,sans-serif;max-height:92vh;">
+
+            <!-- Drag handle (mobile) -->
+            <div class="flex justify-center pt-3 sm:hidden">
+                <div class="w-9 h-1 bg-slate-200 dark:bg-slate-600 rounded-full"></div>
+            </div>
+
+            <!-- Header -->
+            <div id="modalCameraHeader"
+                 class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center
+                                bg-gradient-to-br from-indigo-700 to-indigo-500 shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
+                        <i class="ph-fill ph-camera text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <p id="modalCameraTitulo"
+                           class="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-50 leading-tight">
+                            Registrar Foto
+                        </p>
+                        <p id="modalCameraSubtitulo"
+                           class="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">
+                            Escolha como adicionar
+                        </p>
+                    </div>
+                </div>
+                <button id="btnFecharModalCamera"
+                        onclick="fecharModalCamera()"
+                        class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl
+                               bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400
+                               hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100
+                               transition-all">
+                    <i class="ph-bold ph-x text-sm"></i>
+                </button>
+            </div>
+
+            <!-- ── TELA MENU ── -->
+            <div id="cameraTelaMenu" class="flex flex-col gap-3 p-5 pb-6 overflow-y-auto">
+
+                <button id="btnAbrirCamera"
+                        class="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all
+                               border-[1.5px] border-slate-200 dark:border-slate-700
+                               bg-white dark:bg-slate-900
+                               hover:border-indigo-400 dark:hover:border-indigo-500
+                               hover:bg-indigo-50 dark:hover:bg-slate-800
+                               hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-4px_rgba(99,102,241,0.15)]">
+                    <div class="w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center
+                                bg-gradient-to-br from-indigo-700 to-indigo-400
+                                shadow-[0_4px_12px_rgba(99,102,241,0.25)]">
+                        <i class="ph-fill ph-camera text-xl text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-extrabold text-slate-900 dark:text-slate-50">Câmera ao Vivo</p>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Tire uma foto diretamente pelo dispositivo</p>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-slate-300 dark:text-slate-600 text-base flex-shrink-0"></i>
+                </button>
+
+                <button id="btnAbrirUpload"
+                        class="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all
+                               border-[1.5px] border-slate-200 dark:border-slate-700
+                               bg-white dark:bg-slate-900
+                               hover:border-emerald-400 dark:hover:border-emerald-500
+                               hover:bg-emerald-50 dark:hover:bg-slate-800
+                               hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-4px_rgba(16,185,129,0.15)]">
+                    <div class="w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center
+                                bg-gradient-to-br from-emerald-600 to-emerald-400
+                                shadow-[0_4px_12px_rgba(16,185,129,0.25)]">
+                        <i class="ph-fill ph-upload-simple text-xl text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-extrabold text-slate-900 dark:text-slate-50">Importar Arquivo</p>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Selecione da galeria ou do computador</p>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-slate-300 dark:text-slate-600 text-base flex-shrink-0"></i>
+                </button>
+
+                <input type="file" id="inputArquivoFoto" accept="image/*" multiple class="hidden">
+                <input type="file" id="inputCameraNativa" accept="image/*" capture="environment" class="hidden">
+            </div>
+
+            <!-- ── TELA CÂMERA ── -->
+            <div id="cameraTelaCamera" class="hidden flex-col overflow-hidden">
+                <!-- Viewport da câmera -->
+                <div class="relative bg-black" style="aspect-ratio:4/3;">
+                    <video id="cameraVideoStream" autoplay playsinline muted
+                           class="w-full h-full object-cover block"></video>
+                    <!-- Frame guia -->
+                    <div class="absolute inset-3 rounded-xl pointer-events-none
+                                border-[1.5px] border-indigo-400/50
+                                shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]"></div>
+                    <!-- Spinner carregamento -->
+                    <div id="cameraLoadingSpinner"
+                         class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center gap-3">
+                        <div class="cam-spin w-9 h-9 rounded-full
+                                    border-[3px] border-white/10 border-t-indigo-400"></div>
+                        <span class="text-[11px] font-bold uppercase tracking-widest text-white/40">
+                            Conectando câmera...
+                        </span>
+                    </div>
+                </div>
+                <!-- Toolbar câmera -->
+                <div class="flex gap-2.5 p-3.5
+                            bg-slate-50 dark:bg-slate-900
+                            border-t border-slate-100 dark:border-slate-700">
+                    <button id="btnVoltarAoMenu"
+                            class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all
+                                   border-[1.5px] border-slate-200 dark:border-slate-700
+                                   bg-white dark:bg-slate-800
+                                   text-slate-500 dark:text-slate-400
+                                   hover:bg-slate-100 dark:hover:bg-slate-700">
+                        ← Voltar
+                    </button>
+                    <button id="btnTirarFoto"
+                            class="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl
+                                   text-sm font-extrabold text-white transition-all
+                                   bg-gradient-to-br from-indigo-700 to-indigo-500
+                                   shadow-[0_4px_16px_rgba(99,102,241,0.35)]
+                                   hover:shadow-[0_6px_20px_rgba(99,102,241,0.45)] hover:-translate-y-0.5
+                                   active:translate-y-0">
+                        <i class="ph-fill ph-camera text-lg"></i> Capturar Foto
+                    </button>
+                    <button id="btnTrocarCamera" title="Trocar câmera"
+                            class="w-11 h-11 self-center flex-shrink-0 flex items-center justify-center rounded-xl transition-all
+                                   border-[1.5px] border-slate-200 dark:border-slate-700
+                                   bg-white dark:bg-slate-800
+                                   text-slate-500 dark:text-slate-400
+                                   hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <i class="ph-bold ph-camera-rotate text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── TELA PREVIEW ── -->
+            <div id="cameraTelaPreview" class="hidden flex-col overflow-hidden">
+                <!-- Preview da imagem -->
+                <div class="relative bg-black" style="aspect-ratio:4/3;">
+                    <img id="cameraPreviewImg" src="" alt="Preview"
+                         class="w-full h-full object-cover block">
+                    <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg
+                                bg-black/55 backdrop-blur-sm">
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-white/85">
+                            Pré-visualização
+                        </span>
+                    </div>
+                </div>
+                <!-- Toolbar preview -->
+                <div class="flex flex-col gap-2.5 p-3.5
+                            bg-slate-50 dark:bg-slate-900
+                            border-t border-slate-100 dark:border-slate-700">
+                    <input id="cameraDescricao" type="text"
+                           placeholder="Legenda ou observação clínica (opcional)"
+                           class="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all
+                                  border-[1.5px] border-slate-200 dark:border-slate-700
+                                  bg-white dark:bg-slate-950
+                                  text-slate-900 dark:text-slate-100
+                                  placeholder-slate-400 dark:placeholder-slate-600
+                                  focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20">
+                    <div class="flex gap-2.5">
+                        <button id="btnRecapturar"
+                                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all
+                                       border-[1.5px] border-slate-200 dark:border-slate-700
+                                       bg-white dark:bg-slate-800
+                                       text-slate-500 dark:text-slate-400
+                                       hover:bg-slate-100 dark:hover:bg-slate-700">
+                            ↩ Tirar Outra
+                        </button>
+                        <button id="btnConfirmarFoto"
+                                class="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl
+                                       text-sm font-extrabold text-white transition-all
+                                       bg-gradient-to-br from-emerald-600 to-emerald-500
+                                       shadow-[0_4px_16px_rgba(16,185,129,0.35)]
+                                       hover:shadow-[0_6px_20px_rgba(16,185,129,0.45)] hover:-translate-y-0.5
+                                       active:translate-y-0">
+                            <i class="ph-fill ph-check-circle text-lg"></i> Confirmar Foto
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas oculto para captura -->
+            <canvas id="cameraCanvas" class="hidden"></canvas>
+        </div>
+    </div>
+    <!-- /MODAL CÂMERA -->
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MODAL PRODUTOS CLÍNICOS
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="modalProdutosOverlay">
+        <!-- Backdrop para fechar -->
+        <div class="absolute inset-0" onclick="fecharModalProdutos()"></div>
+
+        <!-- Card principal -->
+        <div id="modalProdutosBox"
+             class="relative z-10 w-full max-w-lg bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col"
+             style="max-height: 90vh;">
+
+            <!-- Drag handle mobile -->
+            <div class="flex justify-center pt-3 sm:hidden">
+                <div class="w-9 h-1 bg-slate-200 rounded-full"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-500 flex items-center justify-center shadow-md shadow-emerald-100">
+                        <i class="ph-fill ph-first-aid-kit text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-base font-extrabold text-slate-900 tracking-tight">Produtos Utilizados</p>
+                        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">Selecione os produtos desta consulta</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="produtosContadorModal" class="hidden px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">0 selecionado(s)</span>
+                    <button onclick="fecharModalProdutos()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-all">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Corpo scrollável -->
+            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+                <!-- Busca -->
+                <div class="relative">
+                    <i class="ph-bold ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                    <input id="produtosBusca" type="text" placeholder="Buscar produto..."
+                        oninput="filtrarProdutosModal(this.value)"
+                        class="w-full pl-10 pr-4 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all">
+                </div>
+
+                <!-- Lista de produtos -->
+                <div id="produtosListaModal" class="space-y-2">
+                    <!-- Gerada via JS -->
+                    <div class="flex items-center justify-center py-8 text-slate-400">
+                        <i class="ph-fill ph-spinner animate-spin text-2xl mr-2"></i>
+                        <span class="text-sm font-medium">Carregando produtos...</span>
+                    </div>
+                </div>
+
+                <!-- Separador -->
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px bg-slate-100" id="sepProd1"></div>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ou adicionar manualmente</span>
+                    <div class="flex-1 h-px bg-slate-100" id="sepProd2"></div>
+                </div>
+
+                <!-- Inserção manual -->
+                <div class="flex gap-2">
+                    <input id="produtoManualInput" type="text" placeholder="Nome do produto não listado..."
+                        class="flex-1 px-4 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all">
+                    <button onclick="adicionarProdutoManual()" type="button"
+                        class="px-4 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1.5">
+                        <i class="ph-bold ph-plus"></i> Adicionar
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 font-medium -mt-2">
+                    <i class="ph-fill ph-info text-indigo-400"></i>
+                    Produtos adicionados manualmente ficam salvos para uso futuro.
+                </p>
+            </div>
+
+            <!-- Footer com ações -->
+            <div class="flex gap-3 px-5 py-4 border-t border-slate-100 flex-shrink-0" id="modalProdutosFooter">
+                <button onclick="fecharModalProdutos()" type="button"
+                    class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">
+                    Cancelar
+                </button>
+                <button onclick="confirmarSelecaoProdutos()" type="button"
+                    class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-check-circle text-lg"></i>
+                    Confirmar Seleção
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- /MODAL PRODUTOS -->
+
+    <!-- ── Módulos da Nova Arquitetura (ordem de dependência) ── -->
+    <script src="js/config.js"></script>
+    <script src="js/ui/toast.js"></script>
+    <script src="js/ui/recording.js"></script>
+    <script src="js/services/assinatura.service.js"></script>
+    <script src="js/services/produto.service.js"></script>
+    <script src="js/ui/produtos-modal.js"></script>
+
+    <!-- ── App principal ── -->
+    <script src="app-images.js?v=6"></script>
+    <script src="app.js?v=20260430"></script>
+    <script>
+        // Repassa nome do paciente/médico para o gerador de relatório fotográfico
+        document.addEventListener('DOMContentLoaded', function () {
+            var urlParams = new URLSearchParams(window.location.search);
+            window._pacienteNomeParaRelatorio = urlParams.get('paciente') || 'Paciente';
+            var med = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+            window._medicoNomeParaRelatorio = med.nome ? 'Dr(a). ' + med.nome : 'Médico';
+        });
+    </script>
+</body>
+
+</html>

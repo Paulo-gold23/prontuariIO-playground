@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50 antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — prontuar.IO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Supabase SDK e Auth Guard -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="auth-guard.js"></script>
+    <script src="dark-mode.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body
+    class="h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-slate-50 to-blue-50 overflow-x-hidden">
+
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="flex justify-center items-center gap-3">
+            <div class="p-2 bg-indigo-600 text-white rounded-xl shadow-indigo-200 shadow-lg">
+                <i class="ph ph-waveform text-3xl"></i>
+            </div>
+            <h2 class="text-3xl font-black text-slate-800 tracking-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
+                    prontuar.IO
+                </span>
+            </h2>
+        </div>
+        <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">Acesse sua conta</h2>
+        <p class="mt-2 text-center text-sm text-slate-600">
+            Selecione seu perfil para continuar
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative">
+        <div class="absolute top-4 right-4 z-10">
+            <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                title="Modo Noturno">
+                <i class="ph-bold ph-moon text-xl"></i>
+            </button>
+        </div>
+        <div class="bg-white py-8 px-4 shadow-xl shadow-slate-200 sm:rounded-2xl sm:px-10 border border-slate-100">
+            <div class="space-y-6">
+
+                <!-- Formulario de Login Unico -->
+                <div id="login-form" class="animate-fade-in">
+                    <div class="flex items-center mb-6">
+                        <h3 class="text-lg font-bold text-slate-900" id="login-title">Acesso à Clínica</h3>
+                    </div>
+
+                    <form onsubmit="handleLogin(event)" class="space-y-4">
+
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-slate-700 mb-1"
+                                id="label-username">Usuário</label>
+                            <input type="text" id="username" required
+                                class="w-full rounded-lg border border-slate-300 py-2.5 px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        </div>
+
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                            <div class="relative">
+                                <input type="password" id="password" required
+                                    class="w-full rounded-lg border border-slate-300 py-2.5 px-3 pr-10 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                <button type="button" onclick="togglePassword()" id="toggle-pw"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors">
+                                    <i class="ph ph-eye text-lg" id="eye-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="error-msg" class="hidden text-sm text-rose-500 font-medium p-2 bg-rose-50 rounded-md">
+                            Credenciais inválidas.
+                        </div>
+
+                        <button type="submit" id="btn-submit"
+                            class="w-full rounded-lg bg-slate-900 py-2.5 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition-colors flex justify-center items-center gap-2">
+                            Entrar
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <div class="mt-8 border-t border-slate-100 pt-6 space-y-2">
+                <p class="text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
+                    <i class="ph-fill ph-seal-check text-emerald-500"></i>
+                    Software Registrado INPI: BR512026001957-5
+                </p>
+                <p class="text-center text-xs text-slate-400">
+                    &copy; 2026 prontuar.IO &bull; O futuro do prontuário médico
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const pw = document.getElementById('password');
+            const icon = document.getElementById('eye-icon');
+            if (pw.type === 'password') {
+                pw.type = 'text';
+                icon.className = 'ph ph-eye-slash text-lg';
+            } else {
+                pw.type = 'password';
+                icon.className = 'ph ph-eye text-lg';
+            }
+        }
+
+        const errorMsg = document.getElementById('error-msg');
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btnSubmit = document.getElementById('btn-submit');
+            const email = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            errorMsg.classList.add('hidden');
+            btnSubmit.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Entrando...';
+            btnSubmit.disabled = true;
+
+            try {
+                // 0. LIMPAR sessão anterior completamente (evita vazamento entre médicos)
+                localStorage.removeItem('medico_ativo');
+                localStorage.removeItem('secretaria_ativa');
+                localStorage.removeItem('user_role');
+
+                // 1. Autenticação com Supabase
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+
+                const authUserId = data.user.id;
+
+                // 2. Buscar dados reais do médico na tabela 'medicos'
+                // O medico_id usado no banco (pacientes, consultas) deve ser o id da tabela medicos,
+                // que pode ser diferente do auth_user_id do Supabase Auth
+                let medicoData = null;
+                try {
+                    // Tenta primeiro por auth_user_id (coluna que mapeia Supabase Auth -> medicos)
+                    const { data: m1, error: e1 } = await supabaseClient
+                        .from('medicos')
+                        .select('id, nome, crm, especialidade')
+                        .eq('auth_user_id', authUserId)
+                        .limit(1);
+
+                    if (!e1 && m1 && m1.length > 0) {
+                        medicoData = m1[0];
+                    } else {
+                        // Fallback: tenta pelo próprio id UUID (caso a tabela use o mesmo UUID do Auth)
+                        const { data: m2, error: e2 } = await supabaseClient
+                            .from('medicos')
+                            .select('id, nome, crm, especialidade')
+                            .eq('id', authUserId)
+                            .limit(1);
+
+                        if (!e2 && m2 && m2.length > 0) {
+                            medicoData = m2[0];
+                        }
+                    }
+                } catch(lookupErr) {
+                    console.warn('Aviso: não foi possível buscar tabela medicos:', lookupErr.message);
+                }
+
+                // 3. Montar o objeto medico_ativo com o ID CORRETO para o banco de dados
+                const medicoAtivo = {
+                    id: medicoData ? medicoData.id : authUserId,  // ID real da tabela medicos
+                    auth_id: authUserId,                           // ID do Supabase Auth (para referência)
+                    nome: medicoData?.nome || data.user.user_metadata?.full_name || 'Dr. Médico',
+                    crm: medicoData?.crm || data.user.user_metadata?.crm || 'CRM/UF 000000',
+                    especialidade: medicoData?.especialidade || ''
+                };
+
+                localStorage.setItem('secretaria_ativa', 'true');
+                localStorage.setItem('medico_ativo', JSON.stringify(medicoAtivo));
+
+                // 4. Determinar papel (role) baseado na TABELA medicos (não no email)
+                // Se encontrou registro na tabela medicos = é médico
+                // Caso contrário = recepção/secretaria
+                const isMedico = medicoData !== null;
+
+                if (isMedico) {
+                    localStorage.setItem('user_role', 'medico');
+                    window.location.href = 'medico-dashboard.html';
+                } else {
+                    localStorage.setItem('user_role', 'recepcao');
+                    window.location.href = 'recepcao.html';
+                }
+
+            } catch (error) {
+                console.error("Erro no login:", error.message);
+                errorMsg.innerText = error.message === 'Invalid login credentials'
+                    ? 'E-mail ou senha incorretos.'
+                    : 'Erro ao conectar. Verifique os dados.';
+                errorMsg.classList.remove('hidden');
+                btnSubmit.innerHTML = 'Entrar';
+                btnSubmit.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

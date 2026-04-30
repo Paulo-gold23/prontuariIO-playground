@@ -1,0 +1,3339 @@
+{
+  "updatedAt": "2026-02-19T20:58:53.000Z",
+  "createdAt": "2026-02-02T14:07:48.243Z",
+  "id": "IewE4EVkamdV7adX",
+  "name": "Prontuario_AI_FINAL",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novaConsulta",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "audio"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3584,
+        2192
+      ],
+      "id": "53ff246b-4b6d-40c4-b1c4-4a3718113641",
+      "name": "novaConsulta",
+      "webhookId": "20126c2d-2b16-48d1-826e-0f58983d6efc"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pacientes (\n  nome,\n  data_nascimento,\n  sexo,\n  telefone,\n  convenio,\n  responsavel_nome,\n  responsavel_parentesco,\n  endereco,\n  cidade,\n  uf\n)\nVALUES (\n  $1, $2::date, LEFT($3, 2), $4, $5, $6, $7, $8, $9, LEFT($10, 2)\n)\nRETURNING id, nome, created_at;\n",
+        "options": {
+          "queryReplacement": "={{ $json.nome }}\n{{ $json.data_nascimento }}\n{{ $json.sexo }}\n{{ $json.telefone }}\n{{ $json.convenio }}\n{{ $json.responsavel_nome }}\n{{ $json.responsavel_parentesco }}\n{{ $json.endereco }}\n{{ $json.cidade }}\n{{ $json.uf }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3104,
+        1072
+      ],
+      "id": "8c8a049f-ba03-431b-bbb4-4eddb9941192",
+      "name": "criarPaciente",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Nova Consulta ",
+        "height": 352,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3088,
+        2032
+      ],
+      "id": "86f4a911-9e0e-4c5d-a913-a5705cbab400",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET audio_url = $1\nWHERE id = $2;\n",
+        "options": {
+          "queryReplacement": "=audios_consultas/{{ $('prepararDados').first().json.nome_arquivo }},{{ $('prepararDados').first().json.consulta_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2672,
+        2624
+      ],
+      "id": "47702f6e-2c2a-441b-a4de-e5e77352f0da",
+      "name": "att_consultaAudio",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===============================\n// prepararDados ├ö├ç├Â extract body + preserve binary + gen UUID\n// ===============================\n\n// 1. Extract body fields\nconst body = $json.body || $json;\n\nif (!body.paciente_id) throw new Error('paciente_id Ôö£┬« obrigatÔö£Ôöério');\nif (!body.medico_id) throw new Error('medico_id Ôö£┬« obrigatÔö£Ôöério');\n\n// 2. Generate UUID (pure JS, no crypto module)\nfunction uuid4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    var r = Math.random() * 16 | 0;\n    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);\n  });\n}\n\nconst consultaId = uuid4();\n\n// 3. Find the audio binary key DYNAMICALLY\n// Webhook may name it \"audio\", \"audio0\", \"data\", etc.\nconst inputItem = $input.first();\nconst binaryKeys = Object.keys(inputItem.binary || {});\n\nif (binaryKeys.length === 0) {\n  throw new Error('Nenhum binÔö£├¡rio recebido');\n}\n\n// Use first available binary key\nconst audioKey = binaryKeys[0];\nconsole.log('Binary key found:', audioKey);\n\n// 4. Return JSON + rename binary to \"audio\" for downstream nodes\nconst binaryOutput = {};\nbinaryOutput['audio'] = inputItem.binary[audioKey];\n\nreturn [{\n  json: {\n    consulta_id: consultaId,\n    paciente_id: body.paciente_id,\n    medico_id: body.medico_id,\n    nome_arquivo: consultaId + '.webm'\n  },\n  binary: binaryOutput\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3280,
+        2192
+      ],
+      "id": "f861ce1f-140c-4a97-952f-71c8964f9aa4",
+      "name": "prepararDados"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET\n  transcricao_completa = $1,\n  audio_duracao_segundos = $2,\n  status = 'transcrito',\n  transcrito_em = NOW()\nWHERE id = $3;\n",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($('stt_Groq').first().json.text) }},{{ Math.round($('stt_Groq').first().json.duration || 0) }},{{ $('criarConsulta').first().json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1680,
+        2176
+      ],
+      "id": "6c3336d9-ee18-457e-952c-419bb79cc4d0",
+      "name": "subirTranscicao",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET\n  prontuario_json = $1,\n  status = 'pendente_revisao',\n  processado_em = NOW(),\n  updated_at = NOW()\nWHERE id = $2 RETURNING id, prontuario_json;",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json) }}  {{ $('criarConsulta').first().json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -320,
+        2160
+      ],
+      "id": "24de8103-fb6f-4b26-b090-400067219f85",
+      "name": "saveProntuario",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=TEXTO:\n'''\n{{ $('stt_Groq').first().json.text }}\n'''\n\nPreencha o JSON abaixo com TUDO que encontrar no texto.\nNão deixe campos vazios se houver qualquer menção no áudio.\n\n{\n  \"hda\": \"...\",\n  \"exame_fisico\": \"...\",\n  \"diagnostico\": \"...\",\n  \"tratamento\": \"...\",\n  \"observacoes\": \"...\"\n}",
+        "options": {
+          "systemMessage": "Você é um Assistente de Prontuário Inteligente.\nSua função é ler transcrições imperfeitas e salvar o máximo de informação possível.\n\nREGRA DE SALVAMENTO:\n1. Mesmo que o texto esteja estranho (\"futebol espiritual\"), tente entender o contexto (\"atividade física\" ou \"fisioterapia\").\n2. Se não entender, copie o trecho original entre aspas. **NUNCA DEVOLVA NULL SE HOUVER TEXTO.**\n3. Corrija remédios conhecidos (\"dicofenaco\" -> \"Diclofenaco\").\n\nSEU OBJETIVO É PREENCHER OS CAMPOS, NÃO VALIDAR A VERACIDADE.\nA responsabilidade final é do médico que vai editar."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1360,
+        2176
+      ],
+      "id": "c388bd0d-2032-477a-81c5-eff4845e0cd9",
+      "name": "extrair prontuario AI"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 4000,
+          "textFormat": {
+            "textOptions": {
+              "type": "text"
+            }
+          },
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1360,
+        2400
+      ],
+      "id": "ca39e5c7-7191-4725-bdda-6c9b0a865341",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "eSjj6FCjdiR9g74u",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst agentResult = $('extrair prontuario AI').first().json;\nlet text = agentResult.output || agentResult.text || JSON.stringify(agentResult);\n\ntext = text.replace(/```json/g, \"\").replace(/```/g, \"\");\n\nlet raw = {};\ntry {\n    const s = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);\n    raw = JSON.parse(s);\n} catch(e) {\n    // Regex Rescue: Tenta pegar valores na força bruta se o JSON quebrar\n    const extract = (key) => {\n        const m = text.match(new RegExp(`\"${key}\"\\\\s*:\\\\s*\"([^\"]+)\"`, 'i'));\n        return m ? m[1] : null;\n    };\n    raw = {\n        hda: extract('hda'),\n        exame_fisico: extract('exame_fisico'),\n        diagnostico: extract('diagnostico'),\n        tratamento: extract('tratamento')\n    };\n}\n\nreturn {\n  json: {\n    hda: raw.hda || raw.queixa || $('stt_Groq').first().json.text, // Fallback final: Texto Bruto\n    exame_fisico: raw.exame_fisico,\n    diagnostico: raw.diagnostico,\n    tratamento: raw.tratamento,\n    observacoes: raw.observacoes\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        2160
+      ],
+      "id": "a5150576-f649-47c5-9952-dbbe7cd26850",
+      "name": "parse"
+    },
+    {
+      "parameters": {
+        "path": "cadastroPaciente",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3584,
+        1072
+      ],
+      "id": "d8e73627-d422-458a-80e5-3bb52e124396",
+      "name": "cadastroPaciente",
+      "webhookId": "3ee484be-fd1c-46e4-826a-72a8ce154a89"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('cadastroPaciente').first().json;\n\n// GET webhook coloca dados em query nao no root\nconst body = data.query || data.body || data;\n\nif (!body.nome) {\n  throw new Error('nome eh obrigatorio');\n}\n\nreturn {\n  json: {\n    nome: body.nome.trim().toUpperCase(),\n    data_nascimento: body.data_nascimento || null,\n    sexo: body.sexo ? body.sexo.substring(0, 2) : null,\n    telefone: body.telefone || null,\n    convenio: body.convenio || null,\n    responsavel_nome: body.responsavel_nome || null,\n    responsavel_parentesco: body.responsavel_parentesco || null,\n    endereco: body.endereco || null,\n    cidade: body.cidade || null,\n    uf: body.uf ? body.uf.trim().substring(0, 2).toUpperCase() : null\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3344,
+        1072
+      ],
+      "id": "fb6387c4-9a96-416f-bc17-658f645ad92a",
+      "name": "validaEfiltrar"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2848,
+        1072
+      ],
+      "id": "91359558-cf3e-4244-b7c1-72db9f47ae2a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CRIAR PACIENTE",
+        "height": 336,
+        "width": 1104,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3712,
+        928
+      ],
+      "id": "153b486f-c64c-4f54-8c9c-94d7e9e79447",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        96,
+        2160
+      ],
+      "id": "1f62bb9c-95d2-435a-84f8-442f7b4b709a",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "content": "## CRIACAO CONSULTA\n",
+        "height": 800,
+        "width": 1008,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3712,
+        1984
+      ],
+      "id": "60afe93f-add9-4ca0-9d9d-f2e503fe0073",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## TRANSCRICAO",
+        "height": 800,
+        "width": 1184,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2704,
+        1984
+      ],
+      "id": "768cf4ee-9339-4a6d-bf77-47caa16df145",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## INTERPRETACAO IA",
+        "height": 800,
+        "width": 1056,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        1984
+      ],
+      "id": "df1080df-104f-42e2-a573-01704261a305",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## SAVE AND UPLOAD\n",
+        "height": 800,
+        "width": 800,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        1984
+      ],
+      "id": "ea7f9851-c788-43d1-811e-309e655f8736",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d02dfec7-661e-47c1-aa75-cc96ce8ba1dc",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -992,
+        2176
+      ],
+      "id": "819e77a3-a8d3-4be8-b152-841eba7b551a",
+      "name": "ia_isOkay"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5aeb0b29-f0f6-439d-9c58-7d3e39cdc256",
+              "leftValue": "={{ $('stt_Groq').first().json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2368,
+        2192
+      ],
+      "id": "8080d65b-f939-4e95-9279-ce5500ac7399",
+      "name": "stt_isOkay"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET status = 'erro_stt'\nWHERE id = '{{ $('criarConsulta').first().json.id }}';\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2048,
+        2416
+      ],
+      "id": "778126ab-9a1d-4901-81fe-302ac2469e11",
+      "name": "error_tratamento",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('Erro no STT');\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1840,
+        2416
+      ],
+      "id": "4d027b32-f5bd-4a1f-807e-310021483ccb",
+      "name": "error_msg"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET status = 'erro_extracao_ia'\nWHERE id = '{{ $('criarConsulta').first().json.id }}';\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -848,
+        2400
+      ],
+      "id": "1d3a8a10-7f40-4b48-bc31-efe32f8abc6e",
+      "name": "error_ia",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('Erro na IA');\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        2400
+      ],
+      "id": "4c6846e1-a1e4-49f3-a66d-29b4424c10f3",
+      "name": "error_msg1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aprovarConsulta",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2208,
+        1584
+      ],
+      "id": "e33129c9-6dae-4d0b-9f7f-b3a0c3511a24",
+      "name": "aprovarConsulta",
+      "webhookId": "20bc6e1b-8bfc-46df-b4dd-9959b4b96d67"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('aprovarConsulta').first().json;\n// Tenta pegar de body (POST JSON), query (GET) ou raiz\nconst body = input.body || input.query || input;\n\nif (!body.consulta_id) {\n  throw new Error('consulta_id Ôö£┬« obrigatÔö£Ôöério');\n}\n\nlet p = body.conteudo_medico;\n\n// Se for string JSON, parse\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch(e) {}\n}\n\nif (!p) {\n  // Se nÔö£├║o veio conteudo_medico, tenta pegar do proprio body se for flat\n  if (body.hda || body.diagnostico) {\n     p = body;\n  }\n}\n\nif (!p) {\n    throw new Error('conteudo_medico Ôö£┬« obrigatÔö£Ôöério');\n}\n\n// Retorna normalizado\nreturn { \n    json: {\n        consulta_id: body.consulta_id,\n        conteudo_medico: p\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2000,
+        1584
+      ],
+      "id": "071d195b-71a4-4407-a292-8521beb0ac24",
+      "name": "validarEntrada"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  c.id AS consulta_id,\n  c.status AS status,\n  c.created_at AS data_hora,\n\n  p.nome AS paciente_nome,\n  p.data_nascimento,\n  p.sexo,\n  p.telefone,\n  p.convenio,\n  p.endereco,\n  p.cidade,\n  p.uf,\n\n  m.nome AS medico_nome,\n  m.crm AS medico_crm,\n\n  c.prontuario_json\nFROM consultas c\nJOIN pacientes p ON p.id = c.paciente_id\nJOIN medicos m ON m.id = c.medico_id\nWHERE c.id = $1;\n",
+        "options": {
+          "queryReplacement": "={{ $json.consulta_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1808,
+        1584
+      ],
+      "id": "82768e63-0538-41d2-ab92-b9c4d2d5656d",
+      "name": "buscaConsulta",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "84b2f737-f312-44f4-ad48-9dda0f3e66fd",
+              "leftValue": "={{ $json.status}}",
+              "rightValue": "pendente_revisao",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1584,
+        1584
+      ],
+      "id": "7bef815e-d004-4250-b436-d60366c4586b",
+      "name": "statusValido"
+    },
+    {
+      "parameters": {
+        "jsCode": "let prontuario = $json.prontuario_json;\nconst conteudoMedico = $node[\"validarEntrada\"].json.conteudo_medico;\n\n// Se ainda nÔö£├║o Ôö£┬« versionado\nif (!prontuario.versoes) {\n  prontuario = {\n    versoes: [\n      {\n        tipo: 'ia',\n        conteudo: {\n          hda: prontuario.hda ?? null,\n          exame_fisico: prontuario.exame_fisico ?? null,\n          diagnostico: prontuario.diagnostico ?? null,\n          tratamento: prontuario.tratamento ?? null,\n          observacoes: prontuario.observacoes ?? null\n        },\n        criado_em: prontuario._meta?.processado_em ?? new Date().toISOString()\n      }\n    ],\n    versao_ativa: 'ia'\n  };\n}\n\n// Adiciona versÔö£├║o mÔö£┬«dica\nprontuario.versoes.push({\n  tipo: 'medico',\n  conteudo: conteudoMedico,\n  criado_em: new Date().toISOString()\n});\n\n// Define versÔö£├║o ativa\nprontuario.versao_ativa = 'medico';\n\nreturn {\n  json: {\n    consulta_id: $json.consulta_id,\n    prontuario\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1360,
+        1392
+      ],
+      "id": "c661a7c9-6f42-4dc8-a41a-34bd3fd53633",
+      "name": "criarVersaoMedico"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas\nSET\n  prontuario_json = $1,\n  status = 'finalizado',\n  hora_saida = NOW(),\n  aprovado_em = NOW(),\n  updated_at = NOW()\nWHERE id = $2\nRETURNING id, status;\n",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($json.prontuario)}},{{ $json.consulta_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1136,
+        1392
+      ],
+      "id": "ddf289e6-17ab-4f81-aec3-2926716bd01f",
+      "name": "salvarprontuarioATT",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// dados vindos da query\nconst data = $node[\"buscaConsulta\"].json;\n\n// prontuário (schema atual, não versionado)\nconst prontuario = data.prontuario_json || {};\n\n// Helpers de formatação\nfunction formatDate(iso) {\n  if (!iso) return 'N/I';\n  try {\n      const d = new Date(iso);\n      return d.toLocaleDateString('pt-BR', {timeZone: 'UTC'});\n  } catch(e) { return iso; }\n}\n\nfunction formatDatetime(iso) {\n    if (!iso) return '';\n    try {\n        const d = new Date(iso);\n        return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n    } catch (e) { return iso; }\n}\n\nconst safe = (str) => str ? str.replace(/\\n/g, '<br/>') : '';\n\nconst html = `\n<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n<meta charset=\"UTF-8\" />\n<title>Prontuário</title>\n<style>\n  body {\n    font-family: 'Segoe UI', Arial, sans-serif; /* Fonte mais moderna */\n    font-size: 14px; /* Aumentado de 12px */\n    margin: 45px;\n    color: #1a1a1a;\n    line-height: 1.6; /* Melhor leitura */\n  }\n\n  .top-bar {\n    border-bottom: 3px solid #333;\n    padding-bottom: 15px;\n    margin-bottom: 25px;\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n  }\n\n  .top-bar h1 {\n    margin: 0;\n    font-size: 24px; /* Aumentado */\n    text-transform: uppercase;\n    color: #2c3e50;\n  }\n  \n  .top-bar small {\n    font-size: 14px;\n    color: #666;\n    display: block;\n    margin-top: 4px;\n  }\n\n  .box-info {\n    background-color: #f8fafc;\n    border: 1px solid #cbd5e1;\n    border-radius: 8px;\n    padding: 20px;\n    margin-bottom: 30px;\n  }\n\n  .grid-info {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 12px 30px;\n  }\n\n  .field-label {\n    font-weight: 700;\n    color: #475569;\n    font-size: 12px;\n    text-transform: uppercase;\n    letter-spacing: 0.5px;\n  }\n  \n  .field-value {\n    font-size: 15px; /* Aumentado */\n    color: #0f172a;\n    font-weight: 500;\n  }\n\n  .section {\n    margin-bottom: 30px;\n  }\n\n  .section h2 {\n    font-size: 16px; /* Aumentado */\n    background-color: #f1f5f9;\n    padding: 10px 15px;\n    border-left: 5px solid #6366f1; /* Indigo */\n    margin: 0 0 15px 0;\n    text-transform: uppercase;\n    color: #1e293b;\n    border-radius: 0 4px 4px 0;\n  }\n\n  .content-text {\n    padding: 0 15px;\n    text-align: justify;\n    font-size: 15px; /* Aumentado */\n    color: #334155;\n  }\n  \n  .footer {\n    border-top: 1px solid #e2e8f0;\n    margin-top: 50px;\n    padding-top: 20px;\n    text-align: center;\n    font-size: 11px;\n    color: #94a3b8;\n  }\n</style>\n</head>\n\n<body>\n\n  <!-- CABEÇALHO -->\n  <div class=\"top-bar\">\n    <div>\n        <h1>${data.medico_nome}</h1>\n        <small>CRM: ${data.medico_crm}</small>\n    </div>\n    <div style=\"text-align: right;\">\n        <strong style=\"font-size: 16px;\">ATENDIMENTO #${data.consulta_id.split('-')[0].toUpperCase()}</strong><br/>\n        <span style=\"color: #666;\">${formatDatetime(data.data_hora)}</span>\n    </div>\n  </div>\n\n  <!-- DADOS DO PACIENTE -->\n  <div class=\"box-info\">\n    <div class=\"grid-info\">\n      <div><span class=\"field-label\">Paciente</span> <div class=\"field-value\">${data.paciente_nome}</div></div>\n      <div><span class=\"field-label\">Convênio</span> <div class=\"field-value\">${data.convenio || 'Particular'}</div></div>\n\n      <div><span class=\"field-label\">Nascimento</span> <div class=\"field-value\">${formatDate(data.data_nascimento)}</div></div>\n      <div><span class=\"field-label\">Telefone</span> <div class=\"field-value\">${data.telefone || 'N/I'}</div></div>\n\n      <div><span class=\"field-label\">Cidade/UF</span> <div class=\"field-value\">${data.cidade || ''} / ${data.uf || ''}</div></div>\n      <div><span class=\"field-label\">Sexo</span> <div class=\"field-value\">${data.sexo}</div></div>\n    </div>\n  </div>\n\n  <!-- CONTEÚDO CLÍNICO -->\n  \n  ${prontuario.hda ? `\n  <div class=\"section\">\n    <h2>Histórico da Doença Atual (HDA)</h2>\n    <div class=\"content-text\">${safe(prontuario.hda)}</div>\n  </div>` : ''}\n\n  ${prontuario.exame_fisico ? `\n  <div class=\"section\">\n    <h2>Exame Físico</h2>\n    <div class=\"content-text\">${safe(prontuario.exame_fisico)}</div>\n  </div>` : ''}\n\n  ${prontuario.diagnostico ? `\n  <div class=\"section\">\n    <h2>Diagnóstico</h2>\n    <div class=\"content-text\">${safe(prontuario.diagnostico)}</div>\n  </div>` : ''}\n\n  ${prontuario.tratamento ? `\n  <div class=\"section\">\n    <h2>Conduta e Tratamento</h2>\n    <div class=\"content-text\">${safe(prontuario.tratamento)}</div>\n  </div>` : ''}\n  \n  <div class=\"footer\">\n    Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} • Prontuário AI\n  </div>\n\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    consulta_id: data.consulta_id,\n    html\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        1392
+      ],
+      "id": "7df4b914-911a-4a8f-aa7a-26157a14f0ef",
+      "name": "gerarHTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst html = $json.html;\nconst consultaId = $json.consulta_id;\nconst bucket = 'prontuarios_pdf';\n// Explicitamente adicionar BOM e URL correta\nconst pdf_url = `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/${bucket}/${consultaId}.pdf`;\n\nreturn {\n  binary: {\n    files: {\n      // Adicionar \\uFEFF (BOM) garante que leitores identifiquem UTF-8 corretamente\n      data: Buffer.from('\\uFEFF' + html, 'utf-8'),\n      mimeType: 'text/html',\n      fileName: 'index.html'\n    }\n  },\n  json: {\n    consulta_id: consultaId,\n    pdf_url\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        1392
+      ],
+      "id": "28b6ec5a-c213-4874-99e2-47f4eb15c235",
+      "name": "htmlTofile"
+    },
+    {
+      "parameters": {
+        "content": "## BUSCAR CONSULTA E VALIDAR",
+        "height": 480,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2240,
+        1312
+      ],
+      "id": "9b5435d6-caf8-4ce5-ab2f-decb2375e00d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## GERAR HTML PRONTUARIO",
+        "height": 480,
+        "width": 704,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        1312
+      ],
+      "id": "ddc65358-c12f-40b9-a241-d61e2abb7336",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## CINVERTER E GERAR PDF",
+        "height": 480,
+        "width": 1472,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        1312
+      ],
+      "id": "8eda3c1c-b6c4-46b9-ac8b-4e700d8ba07a",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://103.199.185.100:3010/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "files"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -432,
+        1392
+      ],
+      "id": "90f9e8ec-1812-42aa-ade0-c22212845d74",
+      "name": "converterPDF"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/prontuarios_pdf/{{ $('criarVersaoMedico').first().json.consulta_id }}.pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_TOKEN_JWT_AQUI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            },
+            {
+              "name": "x-upsert",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -192,
+        1392
+      ],
+      "id": "57787c07-70ea-490b-9a79-634df136c2af",
+      "name": "uploadPDFtoDB"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"consulta_id\": \"{{ $json.id }}\",\n  \"pdf_url\": \"{{ $json.pdf_url }}\"\n}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        432,
+        1600
+      ],
+      "id": "73f18c69-b732-4eb9-8d1c-59e4c34cf32c",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE consultas \nSET status = 'finalizado',\n    updated_at = NOW(),\n    data_finalizacao = NOW(),\n    pdf_url = $1\nWHERE id = $2\nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ $json.pdf_url }}\n{{ $json.consulta_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        256,
+        1392
+      ],
+      "id": "6194b651-29a1-4382-8820-347b4e8ca63d",
+      "name": "updtconsulta",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst consulta_id = $('criarVersaoMedico').first().json.consulta_id;\nreturn {\n  json: {\n    consulta_id: consulta_id,\n    pdf_url: `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/${consulta_id}.pdf`\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1392
+      ],
+      "id": "4362d177-3973-49aa-ae8e-cd56d4e93bea",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parse = $('parse').first().json;\nconst consulta = $('criarConsulta').first().json;\n\nreturn {\n  json: {\n    success: true,\n    consulta_id: consulta.id,\n    status: 'pendente_revisao',\n    // Retorna na raiz para facilitar frontend, ou dentro de dados_extraidos com tudo\n    hda: parse.hda,\n    exame_fisico: parse.exame_fisico,\n    diagnostico: parse.diagnostico,\n    tratamento: parse.tratamento,\n    observacoes: parse.observacoes,\n    \n    dados_extraidos: { // Mantem compatibilidade se precisar\n       hda: parse.hda,\n       exame_fisico: parse.exame_fisico,\n       diagnostico: parse.diagnostico,\n       tratamento: parse.tratamento,\n       observacoes: parse.observacoes\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        2160
+      ],
+      "id": "6b421297-7343-42bf-979f-2edab26f4828",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO consultas (\n  id,\n  paciente_id,\n  medico_id,\n  hora_atendimento,\n  status\n)\nVALUES (\n  $1::uuid,\n  $2,\n  $3,\n  NOW()::TIME,\n  'processando'\n)\nRETURNING id;\n",
+        "options": {
+          "queryReplacement": "={{ $('prepararDados').first().json.consulta_id }}\n{{ $('prepararDados').first().json.paciente_id }}\n{{ $('prepararDados').first().json.medico_id }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2672,
+        2192
+      ],
+      "id": "7ea8bd5e-847e-4a1a-804f-d6250f4d752b",
+      "name": "criarConsulta",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_GROQ_API_KEY_AQUI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "audio"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "language",
+              "value": "pt"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2976,
+        2192
+      ],
+      "id": "36a9a042-d8d2-46fb-b19c-c31544738afc",
+      "name": "stt_Groq"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/audios_consultas/{{ $json.nome_arquivo }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_TOKEN_JWT_AQUI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "audio/webm"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "audio",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2976,
+        2624
+      ],
+      "id": "98acf612-ea50-48c1-8b15-b51df4ab836f",
+      "name": "supabaseAudio"
+    },
+    {
+      "parameters": {
+        "path": "listarPacientes",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3472,
+        1392
+      ],
+      "id": "170781f0-df84-4644-93fb-ccd2e18d394e",
+      "name": "listarPacientes",
+      "webhookId": "fe2631e3-8519-4189-93b3-2a8f6c7cdded"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t), '[]'::json) as all_pacientes FROM (\n  SELECT \n    p.id, \n    p.nome, \n    p.convenio, \n    p.created_at,\n    CASE \n      WHEN EXISTS (SELECT 1 FROM consultas c WHERE c.paciente_id = p.id AND c.status = 'finalizado' AND c.created_at >= (NOW() - INTERVAL '24 hours')) THEN 'finalizado'\n      ELSE 'aguardando'\n    END as status_atendimento\n  FROM pacientes p\n  WHERE p.created_at >= (NOW() - INTERVAL '24 hours')\n  AND (\n    '{{ $json.query.medico_id || \"\" }}' = '' \n    OR NOT EXISTS (SELECT 1 FROM consultas c WHERE c.paciente_id = p.id AND c.status = 'finalizado' AND c.medico_id::text != '{{ $json.query.medico_id || \"\" }}')\n  )\n  ORDER BY p.created_at DESC\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3216,
+        1392
+      ],
+      "id": "94dee853-ed73-4285-86fd-b0e453512687",
+      "name": "listar",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.all_pacientes }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2960,
+        1392
+      ],
+      "id": "15b20688-62a8-425a-bb5b-47d3ddbe26c9",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "path": "delete_paciente",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "webhookExcluir",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3472,
+        1568
+      ],
+      "id": "c0595975-09d8-40db-aa6a-5ca7eeea1aa2",
+      "webhookId": "9ca34f85-9cf6-4284-9b0d-cbdf7900d694"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM pacientes WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ $json.query.id }}"
+        }
+      },
+      "name": "postgresDelete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3216,
+        1568
+      ],
+      "id": "3e7339a0-f9c7-4b18-81dc-ddeba8772a02",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"success\":true}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "responseExclusao",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -2960,
+        1568
+      ],
+      "id": "a0939fc8-5db1-4308-b9b8-ec848b61f73b"
+    },
+    {
+      "parameters": {
+        "content": "## LISTAR E EXCLUIR",
+        "height": 592,
+        "width": 1168,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3696,
+        1312
+      ],
+      "id": "fc50b2f8-05e0-4e69-8776-b3a0d46ebab8",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "path": "consultas_finalizadas",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3472,
+        1712
+      ],
+      "id": "webhook-listar-consultas",
+      "name": "webhookListarConsultas",
+      "webhookId": "edc5ca0a-88b0-43cd-9a6a-7458a389f3a0"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(json_agg(t), '[]'::json) as all_consultas FROM (\n  SELECT \n    c.id as consulta_id,\n    c.status,\n    c.created_at as data_hora,\n    p.nome as paciente_nome,\n    COALESCE(c.pdf_url, 'https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/' || c.id || '.pdf') as pdf_url,\n    c.audio_url\n  FROM consultas c\n  JOIN pacientes p ON p.id = c.paciente_id\n  WHERE c.status = 'finalizado'\n  AND ('{{ $json.query.medico_id || \"\" }}' = '' OR c.medico_id::text = '{{ $json.query.medico_id || \"\" }}')\n  ORDER BY c.created_at DESC\n  LIMIT 20\n) t;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3216,
+        1712
+      ],
+      "id": "postgres-listar-consultas",
+      "name": "postgresListarConsultas",
+      "credentials": {
+        "postgres": {
+          "id": "dTt8zgBls4mFwspX",
+          "name": "prontuarioIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.all_consultas }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2960,
+        1712
+      ],
+      "id": "respond-listar-consultas",
+      "name": "respondListarConsultas"
+    }
+  ],
+  "connections": {
+    "salvarprontuarioATT": {
+      "main": [
+        [
+          {
+            "node": "gerarHTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "updtconsulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "htmlTofile": {
+      "main": [
+        [
+          {
+            "node": "converterPDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subirTranscicao": {
+      "main": [
+        [
+          {
+            "node": "extrair prontuario AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extrair prontuario AI": {
+      "main": [
+        [
+          {
+            "node": "ia_isOkay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "criarConsulta": {
+      "main": [
+        [
+          {
+            "node": "stt_isOkay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "supabaseAudio": {
+      "main": [
+        [
+          {
+            "node": "att_consultaAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepararDados": {
+      "main": [
+        [
+          {
+            "node": "stt_Groq",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "supabaseAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscaConsulta": {
+      "main": [
+        [
+          {
+            "node": "statusValido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "converterPDF": {
+      "main": [
+        [
+          {
+            "node": "uploadPDFtoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cadastroPaciente": {
+      "main": [
+        [
+          {
+            "node": "validaEfiltrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ia_isOkay": {
+      "main": [
+        [
+          {
+            "node": "parse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error_ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "statusValido": {
+      "main": [
+        [
+          {
+            "node": "criarVersaoMedico",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validaEfiltrar": {
+      "main": [
+        [
+          {
+            "node": "criarPaciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "error_ia": {
+      "main": [
+        [
+          {
+            "node": "error_msg1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "saveProntuario": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validarEntrada": {
+      "main": [
+        [
+          {
+            "node": "buscaConsulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "updtconsulta": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aprovarConsulta": {
+      "main": [
+        [
+          {
+            "node": "validarEntrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "criarPaciente": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stt_isOkay": {
+      "main": [
+        [
+          {
+            "node": "subirTranscicao",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error_tratamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "criarVersaoMedico": {
+      "main": [
+        [
+          {
+            "node": "salvarprontuarioATT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse": {
+      "main": [
+        [
+          {
+            "node": "saveProntuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "novaConsulta": {
+      "main": [
+        [
+          {
+            "node": "prepararDados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "uploadPDFtoDB": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stt_Groq": {
+      "main": [
+        [
+          {
+            "node": "criarConsulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "error_tratamento": {
+      "main": [
+        [
+          {
+            "node": "error_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gerarHTML": {
+      "main": [
+        [
+          {
+            "node": "htmlTofile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "extrair prontuario AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "listarPacientes": {
+      "main": [
+        [
+          {
+            "node": "listar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "listar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "webhookExcluir": {
+      "main": [
+        [
+          {
+            "node": "postgresDelete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "postgresDelete": {
+      "main": [
+        [
+          {
+            "node": "responseExclusao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "webhookListarConsultas": {
+      "main": [
+        [
+          {
+            "node": "postgresListarConsultas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "postgresListarConsultas": {
+      "main": [
+        [
+          {
+            "node": "respondListarConsultas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timezone": "America/Sao_Paulo"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "aprovarConsulta": [
+      {
+        "json": {
+          "consulta_id": "3162a7f7-28fd-4e72-8207-dfbaca5dd711",
+          "conteudo_medico": {
+            "hda": "Paciente refere dor lombar há cerca de 10 dias, de início insidioso, piora aos esforços físicos e melhora parcial com repouso.",
+            "exame_fisico": "Bom estado geral. Coluna lombar com dor à palpação paravertebral. Sem déficits neurológicos.",
+            "diagnostico": "Lombalgia mecânica aguda",
+            "diagnostico_historico": null,
+            "tratamento": "Prescrito analgésico comum e anti-inflamatório não esteroidal por 5 dias. Orientado repouso relativo.",
+            "observacoes": "Paciente orientado quanto a sinais de alerta e retorno se piora."
+          }
+        }
+      }
+    ],
+    "cadastroPaciente": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.srv1181762.hstgr.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "origin": "null",
+            "priority": "u=1, i",
+            "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"Google Chrome\";v=\"145\", \"Chromium\";v=\"145\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "172.18.0.1",
+            "x-forwarded-host": "n8n.srv1181762.hstgr.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "7af0bbee56b1",
+            "x-real-ip": "172.18.0.1"
+          },
+          "params": {},
+          "query": {
+            "nome": "Oscar alho de souza",
+            "data_nascimento": "1974-03-19",
+            "telefone": "(27) 99608-5207",
+            "convenio": "SUS",
+            "endereco": "Rua dos cajás, ilha dos bentos",
+            "cidade": "Vila Velha",
+            "uf": "ES"
+          },
+          "body": {},
+          "webhookUrl": "https://n8n.srv1181762.hstgr.cloud/webhook/cadastroPaciente",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "versionId": "239fff7d-bba6-4fc1-8052-f4b784eb2430",
+  "activeVersionId": "239fff7d-bba6-4fc1-8052-f4b784eb2430",
+  "versionCounter": 427,
+  "triggerCount": 6,
+  "shared": [
+    {
+      "updatedAt": "2026-02-02T14:07:48.246Z",
+      "createdAt": "2026-02-02T14:07:48.246Z",
+      "role": "workflow:owner",
+      "workflowId": "IewE4EVkamdV7adX",
+      "projectId": "lLkhKcvR9zvWtADZ",
+      "project": {
+        "updatedAt": "2025-12-08T21:01:58.281Z",
+        "createdAt": "2025-12-08T17:11:17.271Z",
+        "id": "lLkhKcvR9zvWtADZ",
+        "name": "Paulo  Goldner <pggrbr2@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-12-08T17:11:17.275Z",
+            "createdAt": "2025-12-08T17:11:17.275Z",
+            "userId": "827cad77-64ef-466e-aef4-9f71cb559ec0",
+            "projectId": "lLkhKcvR9zvWtADZ",
+            "user": {
+              "updatedAt": "2026-02-20T15:47:56.000Z",
+              "createdAt": "2025-12-08T17:11:17.267Z",
+              "id": "827cad77-64ef-466e-aef4-9f71cb559ec0",
+              "email": "pggrbr2@gmail.com",
+              "firstName": "Paulo ",
+              "lastName": "Goldner",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2025-12-08T21:02:04.764Z",
+                "personalization_survey_n8n_version": "1.122.5"
+              },
+              "settings": {
+                "firstSuccessfulWorkflowId": "ElyeVDAxrh4l2cMt",
+                "userActivated": true,
+                "userActivatedAt": 1765287410610,
+                "easyAIWorkflowOnboarded": true,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1767036885180
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-02-20",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-19T20:58:53.350Z",
+    "createdAt": "2026-02-19T20:58:53.350Z",
+    "versionId": "239fff7d-bba6-4fc1-8052-f4b784eb2430",
+    "workflowId": "IewE4EVkamdV7adX",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "novaConsulta",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*",
+            "binaryPropertyName": "audio"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -3584,
+          2192
+        ],
+        "id": "53ff246b-4b6d-40c4-b1c4-4a3718113641",
+        "name": "novaConsulta",
+        "webhookId": "20126c2d-2b16-48d1-826e-0f58983d6efc"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO pacientes (\n  nome,\n  data_nascimento,\n  sexo,\n  telefone,\n  convenio,\n  responsavel_nome,\n  responsavel_parentesco,\n  endereco,\n  cidade,\n  uf\n)\nVALUES (\n  $1, $2::date, LEFT($3, 2), $4, $5, $6, $7, $8, $9, LEFT($10, 2)\n)\nRETURNING id, nome, created_at;\n",
+          "options": {
+            "queryReplacement": "={{ $json.nome }}\n{{ $json.data_nascimento }}\n{{ $json.sexo }}\n{{ $json.telefone }}\n{{ $json.convenio }}\n{{ $json.responsavel_nome }}\n{{ $json.responsavel_parentesco }}\n{{ $json.endereco }}\n{{ $json.cidade }}\n{{ $json.uf }}\n"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -3104,
+          1072
+        ],
+        "id": "8c8a049f-ba03-431b-bbb4-4eddb9941192",
+        "name": "criarPaciente",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "## Nova Consulta ",
+          "height": 352,
+          "width": 320
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -3088,
+          2032
+        ],
+        "id": "86f4a911-9e0e-4c5d-a913-a5705cbab400",
+        "name": "Sticky Note2"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET audio_url = $1\nWHERE id = $2;\n",
+          "options": {
+            "queryReplacement": "=audios_consultas/{{ $('prepararDados').first().json.nome_arquivo }},{{ $('prepararDados').first().json.consulta_id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -2672,
+          2624
+        ],
+        "id": "47702f6e-2c2a-441b-a4de-e5e77352f0da",
+        "name": "att_consultaAudio",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// ===============================\n// prepararDados ├ö├ç├Â extract body + preserve binary + gen UUID\n// ===============================\n\n// 1. Extract body fields\nconst body = $json.body || $json;\n\nif (!body.paciente_id) throw new Error('paciente_id Ôö£┬« obrigatÔö£Ôöério');\nif (!body.medico_id) throw new Error('medico_id Ôö£┬« obrigatÔö£Ôöério');\n\n// 2. Generate UUID (pure JS, no crypto module)\nfunction uuid4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    var r = Math.random() * 16 | 0;\n    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);\n  });\n}\n\nconst consultaId = uuid4();\n\n// 3. Find the audio binary key DYNAMICALLY\n// Webhook may name it \"audio\", \"audio0\", \"data\", etc.\nconst inputItem = $input.first();\nconst binaryKeys = Object.keys(inputItem.binary || {});\n\nif (binaryKeys.length === 0) {\n  throw new Error('Nenhum binÔö£├¡rio recebido');\n}\n\n// Use first available binary key\nconst audioKey = binaryKeys[0];\nconsole.log('Binary key found:', audioKey);\n\n// 4. Return JSON + rename binary to \"audio\" for downstream nodes\nconst binaryOutput = {};\nbinaryOutput['audio'] = inputItem.binary[audioKey];\n\nreturn [{\n  json: {\n    consulta_id: consultaId,\n    paciente_id: body.paciente_id,\n    medico_id: body.medico_id,\n    nome_arquivo: consultaId + '.webm'\n  },\n  binary: binaryOutput\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -3280,
+          2192
+        ],
+        "id": "f861ce1f-140c-4a97-952f-71c8964f9aa4",
+        "name": "prepararDados"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET\n  transcricao_completa = $1,\n  audio_duracao_segundos = $2,\n  status = 'transcrito',\n  transcrito_em = NOW()\nWHERE id = $3;\n",
+          "options": {
+            "queryReplacement": "={{ JSON.stringify($('stt_Groq').first().json.text) }},{{ Math.round($('stt_Groq').first().json.duration || 0) }},{{ $('criarConsulta').first().json.id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -1680,
+          2176
+        ],
+        "id": "6c3336d9-ee18-457e-952c-419bb79cc4d0",
+        "name": "subirTranscicao",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET\n  prontuario_json = $1,\n  status = 'pendente_revisao',\n  processado_em = NOW(),\n  updated_at = NOW()\nWHERE id = $2 RETURNING id, prontuario_json;",
+          "options": {
+            "queryReplacement": "={{ JSON.stringify($json) }}  {{ $('criarConsulta').first().json.id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -320,
+          2160
+        ],
+        "id": "24de8103-fb6f-4b26-b090-400067219f85",
+        "name": "saveProntuario",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=TEXTO:\n'''\n{{ $('stt_Groq').first().json.text }}\n'''\n\nPreencha o JSON abaixo com TUDO que encontrar no texto.\nNão deixe campos vazios se houver qualquer menção no áudio.\n\n{\n  \"hda\": \"...\",\n  \"exame_fisico\": \"...\",\n  \"diagnostico\": \"...\",\n  \"tratamento\": \"...\",\n  \"observacoes\": \"...\"\n}",
+          "options": {
+            "systemMessage": "Você é um Assistente de Prontuário Inteligente.\nSua função é ler transcrições imperfeitas e salvar o máximo de informação possível.\n\nREGRA DE SALVAMENTO:\n1. Mesmo que o texto esteja estranho (\"futebol espiritual\"), tente entender o contexto (\"atividade física\" ou \"fisioterapia\").\n2. Se não entender, copie o trecho original entre aspas. **NUNCA DEVOLVA NULL SE HOUVER TEXTO.**\n3. Corrija remédios conhecidos (\"dicofenaco\" -> \"Diclofenaco\").\n\nSEU OBJETIVO É PREENCHER OS CAMPOS, NÃO VALIDAR A VERACIDADE.\nA responsabilidade final é do médico que vai editar."
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          -1360,
+          2176
+        ],
+        "id": "c388bd0d-2032-477a-81c5-eff4845e0cd9",
+        "name": "extrair prontuario AI"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "value": "gpt-4.1-mini",
+            "mode": "list",
+            "cachedResultName": "gpt-4.1-mini"
+          },
+          "builtInTools": {},
+          "options": {
+            "maxTokens": 4000,
+            "textFormat": {
+              "textOptions": {
+                "type": "text"
+              }
+            },
+            "temperature": 0
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          -1360,
+          2400
+        ],
+        "id": "ca39e5c7-7191-4725-bdda-6c9b0a865341",
+        "name": "OpenAI Chat Model",
+        "credentials": {
+          "openAiApi": {
+            "id": "eSjj6FCjdiR9g74u",
+            "name": "OpenAi account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst agentResult = $('extrair prontuario AI').first().json;\nlet text = agentResult.output || agentResult.text || JSON.stringify(agentResult);\n\ntext = text.replace(/```json/g, \"\").replace(/```/g, \"\");\n\nlet raw = {};\ntry {\n    const s = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);\n    raw = JSON.parse(s);\n} catch(e) {\n    // Regex Rescue: Tenta pegar valores na força bruta se o JSON quebrar\n    const extract = (key) => {\n        const m = text.match(new RegExp(`\"${key}\"\\\\s*:\\\\s*\"([^\"]+)\"`, 'i'));\n        return m ? m[1] : null;\n    };\n    raw = {\n        hda: extract('hda'),\n        exame_fisico: extract('exame_fisico'),\n        diagnostico: extract('diagnostico'),\n        tratamento: extract('tratamento')\n    };\n}\n\nreturn {\n  json: {\n    hda: raw.hda || raw.queixa || $('stt_Groq').first().json.text, // Fallback final: Texto Bruto\n    exame_fisico: raw.exame_fisico,\n    diagnostico: raw.diagnostico,\n    tratamento: raw.tratamento,\n    observacoes: raw.observacoes\n  }\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -608,
+          2160
+        ],
+        "id": "a5150576-f649-47c5-9952-dbbe7cd26850",
+        "name": "parse"
+      },
+      {
+        "parameters": {
+          "path": "cadastroPaciente",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -3584,
+          1072
+        ],
+        "id": "d8e73627-d422-458a-80e5-3bb52e124396",
+        "name": "cadastroPaciente",
+        "webhookId": "3ee484be-fd1c-46e4-826a-72a8ce154a89"
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $('cadastroPaciente').first().json;\n\n// GET webhook coloca dados em query nao no root\nconst body = data.query || data.body || data;\n\nif (!body.nome) {\n  throw new Error('nome eh obrigatorio');\n}\n\nreturn {\n  json: {\n    nome: body.nome.trim().toUpperCase(),\n    data_nascimento: body.data_nascimento || null,\n    sexo: body.sexo ? body.sexo.substring(0, 2) : null,\n    telefone: body.telefone || null,\n    convenio: body.convenio || null,\n    responsavel_nome: body.responsavel_nome || null,\n    responsavel_parentesco: body.responsavel_parentesco || null,\n    endereco: body.endereco || null,\n    cidade: body.cidade || null,\n    uf: body.uf ? body.uf.trim().substring(0, 2).toUpperCase() : null\n  }\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -3344,
+          1072
+        ],
+        "id": "fb6387c4-9a96-416f-bc17-658f645ad92a",
+        "name": "validaEfiltrar"
+      },
+      {
+        "parameters": {
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Access-Control-Allow-Methods",
+                  "value": "GET, POST, OPTIONS"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type, Authorization"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -2848,
+          1072
+        ],
+        "id": "91359558-cf3e-4244-b7c1-72db9f47ae2a",
+        "name": "Respond to Webhook"
+      },
+      {
+        "parameters": {
+          "content": "## CRIAR PACIENTE",
+          "height": 336,
+          "width": 1104,
+          "color": 6
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -3712,
+          928
+        ],
+        "id": "153b486f-c64c-4f54-8c9c-94d7e9e79447",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Access-Control-Allow-Methods",
+                  "value": "GET, POST, OPTIONS"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type, Authorization"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          96,
+          2160
+        ],
+        "id": "1f62bb9c-95d2-435a-84f8-442f7b4b709a",
+        "name": "Respond to Webhook1"
+      },
+      {
+        "parameters": {
+          "content": "## CRIACAO CONSULTA\n",
+          "height": 800,
+          "width": 1008,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -3712,
+          1984
+        ],
+        "id": "60afe93f-add9-4ca0-9d9d-f2e503fe0073",
+        "name": "Sticky Note4"
+      },
+      {
+        "parameters": {
+          "content": "## TRANSCRICAO",
+          "height": 800,
+          "width": 1184,
+          "color": 6
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -2704,
+          1984
+        ],
+        "id": "768cf4ee-9339-4a6d-bf77-47caa16df145",
+        "name": "Sticky Note5"
+      },
+      {
+        "parameters": {
+          "content": "## INTERPRETACAO IA",
+          "height": 800,
+          "width": 1056,
+          "color": 3
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -1520,
+          1984
+        ],
+        "id": "df1080df-104f-42e2-a573-01704261a305",
+        "name": "Sticky Note6"
+      },
+      {
+        "parameters": {
+          "content": "## SAVE AND UPLOAD\n",
+          "height": 800,
+          "width": 800,
+          "color": 2
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -480,
+          1984
+        ],
+        "id": "ea7f9851-c788-43d1-811e-309e655f8736",
+        "name": "Sticky Note7"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "d02dfec7-661e-47c1-aa75-cc96ce8ba1dc",
+                "leftValue": "={{ $json.output }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -992,
+          2176
+        ],
+        "id": "819e77a3-a8d3-4be8-b152-841eba7b551a",
+        "name": "ia_isOkay"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "5aeb0b29-f0f6-439d-9c58-7d3e39cdc256",
+                "leftValue": "={{ $('stt_Groq').first().json.text }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -2368,
+          2192
+        ],
+        "id": "8080d65b-f939-4e95-9279-ce5500ac7399",
+        "name": "stt_isOkay"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET status = 'erro_stt'\nWHERE id = '{{ $('criarConsulta').first().json.id }}';\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -2048,
+          2416
+        ],
+        "id": "778126ab-9a1d-4901-81fe-302ac2469e11",
+        "name": "error_tratamento",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "throw new Error('Erro no STT');\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1840,
+          2416
+        ],
+        "id": "4d027b32-f5bd-4a1f-807e-310021483ccb",
+        "name": "error_msg"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET status = 'erro_extracao_ia'\nWHERE id = '{{ $('criarConsulta').first().json.id }}';\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -848,
+          2400
+        ],
+        "id": "1d3a8a10-7f40-4b48-bc31-efe32f8abc6e",
+        "name": "error_ia",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "throw new Error('Erro na IA');\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -672,
+          2400
+        ],
+        "id": "4c6846e1-a1e4-49f3-a66d-29b4424c10f3",
+        "name": "error_msg1"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "aprovarConsulta",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -2208,
+          1584
+        ],
+        "id": "e33129c9-6dae-4d0b-9f7f-b3a0c3511a24",
+        "name": "aprovarConsulta",
+        "webhookId": "20bc6e1b-8bfc-46df-b4dd-9959b4b96d67"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $('aprovarConsulta').first().json;\n// Tenta pegar de body (POST JSON), query (GET) ou raiz\nconst body = input.body || input.query || input;\n\nif (!body.consulta_id) {\n  throw new Error('consulta_id Ôö£┬« obrigatÔö£Ôöério');\n}\n\nlet p = body.conteudo_medico;\n\n// Se for string JSON, parse\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch(e) {}\n}\n\nif (!p) {\n  // Se nÔö£├║o veio conteudo_medico, tenta pegar do proprio body se for flat\n  if (body.hda || body.diagnostico) {\n     p = body;\n  }\n}\n\nif (!p) {\n    throw new Error('conteudo_medico Ôö£┬« obrigatÔö£Ôöério');\n}\n\n// Retorna normalizado\nreturn { \n    json: {\n        consulta_id: body.consulta_id,\n        conteudo_medico: p\n    }\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -2000,
+          1584
+        ],
+        "id": "071d195b-71a4-4407-a292-8521beb0ac24",
+        "name": "validarEntrada"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT\n  c.id AS consulta_id,\n  c.status AS status,\n  c.created_at AS data_hora,\n\n  p.nome AS paciente_nome,\n  p.data_nascimento,\n  p.sexo,\n  p.telefone,\n  p.convenio,\n  p.endereco,\n  p.cidade,\n  p.uf,\n\n  m.nome AS medico_nome,\n  m.crm AS medico_crm,\n\n  c.prontuario_json\nFROM consultas c\nJOIN pacientes p ON p.id = c.paciente_id\nJOIN medicos m ON m.id = c.medico_id\nWHERE c.id = $1;\n",
+          "options": {
+            "queryReplacement": "={{ $json.consulta_id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -1808,
+          1584
+        ],
+        "id": "82768e63-0538-41d2-ab92-b9c4d2d5656d",
+        "name": "buscaConsulta",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "84b2f737-f312-44f4-ad48-9dda0f3e66fd",
+                "leftValue": "={{ $json.status}}",
+                "rightValue": "pendente_revisao",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -1584,
+          1584
+        ],
+        "id": "7bef815e-d004-4250-b436-d60366c4586b",
+        "name": "statusValido"
+      },
+      {
+        "parameters": {
+          "jsCode": "let prontuario = $json.prontuario_json;\nconst conteudoMedico = $node[\"validarEntrada\"].json.conteudo_medico;\n\n// Se ainda nÔö£├║o Ôö£┬« versionado\nif (!prontuario.versoes) {\n  prontuario = {\n    versoes: [\n      {\n        tipo: 'ia',\n        conteudo: {\n          hda: prontuario.hda ?? null,\n          exame_fisico: prontuario.exame_fisico ?? null,\n          diagnostico: prontuario.diagnostico ?? null,\n          tratamento: prontuario.tratamento ?? null,\n          observacoes: prontuario.observacoes ?? null\n        },\n        criado_em: prontuario._meta?.processado_em ?? new Date().toISOString()\n      }\n    ],\n    versao_ativa: 'ia'\n  };\n}\n\n// Adiciona versÔö£├║o mÔö£┬«dica\nprontuario.versoes.push({\n  tipo: 'medico',\n  conteudo: conteudoMedico,\n  criado_em: new Date().toISOString()\n});\n\n// Define versÔö£├║o ativa\nprontuario.versao_ativa = 'medico';\n\nreturn {\n  json: {\n    consulta_id: $json.consulta_id,\n    prontuario\n  }\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1360,
+          1392
+        ],
+        "id": "c661a7c9-6f42-4dc8-a41a-34bd3fd53633",
+        "name": "criarVersaoMedico"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas\nSET\n  prontuario_json = $1,\n  status = 'finalizado',\n  hora_saida = NOW(),\n  aprovado_em = NOW(),\n  updated_at = NOW()\nWHERE id = $2\nRETURNING id, status;\n",
+          "options": {
+            "queryReplacement": "={{ JSON.stringify($json.prontuario)}},{{ $json.consulta_id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -1136,
+          1392
+        ],
+        "id": "ddf289e6-17ab-4f81-aec3-2926716bd01f",
+        "name": "salvarprontuarioATT",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "\n// dados vindos da query\nconst data = $node[\"buscaConsulta\"].json;\n\n// prontuário (schema atual, não versionado)\nconst prontuario = data.prontuario_json || {};\n\n// Helpers de formatação\nfunction formatDate(iso) {\n  if (!iso) return 'N/I';\n  try {\n      const d = new Date(iso);\n      return d.toLocaleDateString('pt-BR', {timeZone: 'UTC'});\n  } catch(e) { return iso; }\n}\n\nfunction formatDatetime(iso) {\n    if (!iso) return '';\n    try {\n        const d = new Date(iso);\n        return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n    } catch (e) { return iso; }\n}\n\nconst safe = (str) => str ? str.replace(/\\n/g, '<br/>') : '';\n\nconst html = `\n<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n<meta charset=\"UTF-8\" />\n<title>Prontuário</title>\n<style>\n  body {\n    font-family: 'Segoe UI', Arial, sans-serif; /* Fonte mais moderna */\n    font-size: 14px; /* Aumentado de 12px */\n    margin: 45px;\n    color: #1a1a1a;\n    line-height: 1.6; /* Melhor leitura */\n  }\n\n  .top-bar {\n    border-bottom: 3px solid #333;\n    padding-bottom: 15px;\n    margin-bottom: 25px;\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n  }\n\n  .top-bar h1 {\n    margin: 0;\n    font-size: 24px; /* Aumentado */\n    text-transform: uppercase;\n    color: #2c3e50;\n  }\n  \n  .top-bar small {\n    font-size: 14px;\n    color: #666;\n    display: block;\n    margin-top: 4px;\n  }\n\n  .box-info {\n    background-color: #f8fafc;\n    border: 1px solid #cbd5e1;\n    border-radius: 8px;\n    padding: 20px;\n    margin-bottom: 30px;\n  }\n\n  .grid-info {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 12px 30px;\n  }\n\n  .field-label {\n    font-weight: 700;\n    color: #475569;\n    font-size: 12px;\n    text-transform: uppercase;\n    letter-spacing: 0.5px;\n  }\n  \n  .field-value {\n    font-size: 15px; /* Aumentado */\n    color: #0f172a;\n    font-weight: 500;\n  }\n\n  .section {\n    margin-bottom: 30px;\n  }\n\n  .section h2 {\n    font-size: 16px; /* Aumentado */\n    background-color: #f1f5f9;\n    padding: 10px 15px;\n    border-left: 5px solid #6366f1; /* Indigo */\n    margin: 0 0 15px 0;\n    text-transform: uppercase;\n    color: #1e293b;\n    border-radius: 0 4px 4px 0;\n  }\n\n  .content-text {\n    padding: 0 15px;\n    text-align: justify;\n    font-size: 15px; /* Aumentado */\n    color: #334155;\n  }\n  \n  .footer {\n    border-top: 1px solid #e2e8f0;\n    margin-top: 50px;\n    padding-top: 20px;\n    text-align: center;\n    font-size: 11px;\n    color: #94a3b8;\n  }\n</style>\n</head>\n\n<body>\n\n  <!-- CABEÇALHO -->\n  <div class=\"top-bar\">\n    <div>\n        <h1>${data.medico_nome}</h1>\n        <small>CRM: ${data.medico_crm}</small>\n    </div>\n    <div style=\"text-align: right;\">\n        <strong style=\"font-size: 16px;\">ATENDIMENTO #${data.consulta_id.split('-')[0].toUpperCase()}</strong><br/>\n        <span style=\"color: #666;\">${formatDatetime(data.data_hora)}</span>\n    </div>\n  </div>\n\n  <!-- DADOS DO PACIENTE -->\n  <div class=\"box-info\">\n    <div class=\"grid-info\">\n      <div><span class=\"field-label\">Paciente</span> <div class=\"field-value\">${data.paciente_nome}</div></div>\n      <div><span class=\"field-label\">Convênio</span> <div class=\"field-value\">${data.convenio || 'Particular'}</div></div>\n\n      <div><span class=\"field-label\">Nascimento</span> <div class=\"field-value\">${formatDate(data.data_nascimento)}</div></div>\n      <div><span class=\"field-label\">Telefone</span> <div class=\"field-value\">${data.telefone || 'N/I'}</div></div>\n\n      <div><span class=\"field-label\">Cidade/UF</span> <div class=\"field-value\">${data.cidade || ''} / ${data.uf || ''}</div></div>\n      <div><span class=\"field-label\">Sexo</span> <div class=\"field-value\">${data.sexo}</div></div>\n    </div>\n  </div>\n\n  <!-- CONTEÚDO CLÍNICO -->\n  \n  ${prontuario.hda ? `\n  <div class=\"section\">\n    <h2>Histórico da Doença Atual (HDA)</h2>\n    <div class=\"content-text\">${safe(prontuario.hda)}</div>\n  </div>` : ''}\n\n  ${prontuario.exame_fisico ? `\n  <div class=\"section\">\n    <h2>Exame Físico</h2>\n    <div class=\"content-text\">${safe(prontuario.exame_fisico)}</div>\n  </div>` : ''}\n\n  ${prontuario.diagnostico ? `\n  <div class=\"section\">\n    <h2>Diagnóstico</h2>\n    <div class=\"content-text\">${safe(prontuario.diagnostico)}</div>\n  </div>` : ''}\n\n  ${prontuario.tratamento ? `\n  <div class=\"section\">\n    <h2>Conduta e Tratamento</h2>\n    <div class=\"content-text\">${safe(prontuario.tratamento)}</div>\n  </div>` : ''}\n  \n  <div class=\"footer\">\n    Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} • Prontuário AI\n  </div>\n\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    consulta_id: data.consulta_id,\n    html\n  }\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -896,
+          1392
+        ],
+        "id": "7df4b914-911a-4a8f-aa7a-26157a14f0ef",
+        "name": "gerarHTML"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst html = $json.html;\nconst consultaId = $json.consulta_id;\nconst bucket = 'prontuarios_pdf';\n// Explicitamente adicionar BOM e URL correta\nconst pdf_url = `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/${bucket}/${consultaId}.pdf`;\n\nreturn {\n  binary: {\n    files: {\n      // Adicionar \\uFEFF (BOM) garante que leitores identifiquem UTF-8 corretamente\n      data: Buffer.from('\\uFEFF' + html, 'utf-8'),\n      mimeType: 'text/html',\n      fileName: 'index.html'\n    }\n  },\n  json: {\n    consulta_id: consultaId,\n    pdf_url\n  }\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -672,
+          1392
+        ],
+        "id": "28b6ec5a-c213-4874-99e2-47f4eb15c235",
+        "name": "htmlTofile"
+      },
+      {
+        "parameters": {
+          "content": "## BUSCAR CONSULTA E VALIDAR",
+          "height": 480,
+          "width": 784
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -2240,
+          1312
+        ],
+        "id": "9b5435d6-caf8-4ce5-ab2f-decb2375e00d",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "content": "## GERAR HTML PRONTUARIO",
+          "height": 480,
+          "width": 704,
+          "color": 5
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -1456,
+          1312
+        ],
+        "id": "ddc65358-c12f-40b9-a241-d61e2abb7336",
+        "name": "Sticky Note8"
+      },
+      {
+        "parameters": {
+          "content": "## CINVERTER E GERAR PDF",
+          "height": 480,
+          "width": 1472,
+          "color": 6
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -768,
+          1312
+        ],
+        "id": "8eda3c1c-b6c4-46b9-ac8b-4e700d8ba07a",
+        "name": "Sticky Note9"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://103.199.185.100:3010/forms/chromium/convert/html",
+          "sendBody": true,
+          "contentType": "multipart-form-data",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "parameterType": "formBinaryData",
+                "name": "files",
+                "inputDataFieldName": "files"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -432,
+          1392
+        ],
+        "id": "90f9e8ec-1812-42aa-ade0-c22212845d74",
+        "name": "converterPDF"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/prontuarios_pdf/{{ $('criarVersaoMedico').first().json.consulta_id }}.pdf",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer SEU_TOKEN_JWT_AQUI"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/pdf"
+              },
+              {
+                "name": "x-upsert",
+                "value": "true"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "binaryData",
+          "inputDataFieldName": "data",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -192,
+          1392
+        ],
+        "id": "57787c07-70ea-490b-9a79-634df136c2af",
+        "name": "uploadPDFtoDB"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"success\": true,\n  \"consulta_id\": \"{{ $json.id }}\",\n  \"pdf_url\": \"{{ $json.pdf_url }}\"\n}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Access-Control-Allow-Methods",
+                  "value": "GET, POST, OPTIONS"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type, Authorization"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          432,
+          1600
+        ],
+        "id": "73f18c69-b732-4eb9-8d1c-59e4c34cf32c",
+        "name": "Respond to Webhook3"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE consultas \nSET status = 'finalizado',\n    updated_at = NOW(),\n    data_finalizacao = NOW(),\n    pdf_url = $1\nWHERE id = $2\nRETURNING *;",
+          "options": {
+            "queryReplacement": "={{ $json.pdf_url }}\n{{ $json.consulta_id }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          256,
+          1392
+        ],
+        "id": "6194b651-29a1-4382-8820-347b4e8ca63d",
+        "name": "updtconsulta",
+        "alwaysOutputData": true,
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst consulta_id = $('criarVersaoMedico').first().json.consulta_id;\nreturn {\n  json: {\n    consulta_id: consulta_id,\n    pdf_url: `https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/${consulta_id}.pdf`\n  }\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          1392
+        ],
+        "id": "4362d177-3973-49aa-ae8e-cd56d4e93bea",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "jsCode": "const parse = $('parse').first().json;\nconst consulta = $('criarConsulta').first().json;\n\nreturn {\n  json: {\n    success: true,\n    consulta_id: consulta.id,\n    status: 'pendente_revisao',\n    // Retorna na raiz para facilitar frontend, ou dentro de dados_extraidos com tudo\n    hda: parse.hda,\n    exame_fisico: parse.exame_fisico,\n    diagnostico: parse.diagnostico,\n    tratamento: parse.tratamento,\n    observacoes: parse.observacoes,\n    \n    dados_extraidos: { // Mantem compatibilidade se precisar\n       hda: parse.hda,\n       exame_fisico: parse.exame_fisico,\n       diagnostico: parse.diagnostico,\n       tratamento: parse.tratamento,\n       observacoes: parse.observacoes\n    }\n  }\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -112,
+          2160
+        ],
+        "id": "6b421297-7343-42bf-979f-2edab26f4828",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO consultas (\n  id,\n  paciente_id,\n  medico_id,\n  hora_atendimento,\n  status\n)\nVALUES (\n  $1::uuid,\n  $2,\n  $3,\n  NOW()::TIME,\n  'processando'\n)\nRETURNING id;\n",
+          "options": {
+            "queryReplacement": "={{ $('prepararDados').first().json.consulta_id }}\n{{ $('prepararDados').first().json.paciente_id }}\n{{ $('prepararDados').first().json.medico_id }}\n"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -2672,
+          2192
+        ],
+        "id": "7ea8bd5e-847e-4a1a-804f-d6250f4d752b",
+        "name": "criarConsulta",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer SEU_GROQ_API_KEY_AQUI"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "multipart-form-data",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "parameterType": "formBinaryData",
+                "name": "file",
+                "inputDataFieldName": "audio"
+              },
+              {
+                "name": "model",
+                "value": "whisper-large-v3"
+              },
+              {
+                "name": "language",
+                "value": "pt"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -2976,
+          2192
+        ],
+        "id": "36a9a042-d8d2-46fb-b19c-c31544738afc",
+        "name": "stt_Groq"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/audios_consultas/{{ $json.nome_arquivo }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer SEU_TOKEN_JWT_AQUI"
+              },
+              {
+                "name": "Content-Type",
+                "value": "audio/webm"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "binaryData",
+          "inputDataFieldName": "audio",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -2976,
+          2624
+        ],
+        "id": "98acf612-ea50-48c1-8b15-b51df4ab836f",
+        "name": "supabaseAudio"
+      },
+      {
+        "parameters": {
+          "path": "listarPacientes",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -3472,
+          1392
+        ],
+        "id": "170781f0-df84-4644-93fb-ccd2e18d394e",
+        "name": "listarPacientes",
+        "webhookId": "fe2631e3-8519-4189-93b3-2a8f6c7cdded"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t), '[]'::json) as all_pacientes FROM (\n  SELECT \n    p.id, \n    p.nome, \n    p.convenio, \n    p.created_at,\n    CASE \n      WHEN EXISTS (SELECT 1 FROM consultas c WHERE c.paciente_id = p.id AND c.status = 'finalizado' AND c.created_at >= (NOW() - INTERVAL '24 hours')) THEN 'finalizado'\n      ELSE 'aguardando'\n    END as status_atendimento\n  FROM pacientes p\n  WHERE p.created_at >= (NOW() - INTERVAL '24 hours')\n  ORDER BY p.created_at DESC\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -3216,
+          1392
+        ],
+        "id": "94dee853-ed73-4285-86fd-b0e453512687",
+        "name": "listar",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json.all_pacientes }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "name": "Access-Control-Allow-Methods",
+                  "value": "GET, POST, OPTIONS"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type, Authorization"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -2960,
+          1392
+        ],
+        "id": "15b20688-62a8-425a-bb5b-47d3ddbe26c9",
+        "name": "Respond to Webhook2"
+      },
+      {
+        "parameters": {
+          "path": "delete_paciente",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "name": "webhookExcluir",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -3472,
+          1568
+        ],
+        "id": "c0595975-09d8-40db-aa6a-5ca7eeea1aa2",
+        "webhookId": "9ca34f85-9cf6-4284-9b0d-cbdf7900d694"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "DELETE FROM pacientes WHERE id = $1;",
+          "options": {
+            "queryReplacement": "={{ $json.query.id }}"
+          }
+        },
+        "name": "postgresDelete",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -3216,
+          1568
+        ],
+        "id": "3e7339a0-f9c7-4b18-81dc-ddeba8772a02",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"success\":true}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ]
+            }
+          }
+        },
+        "name": "responseExclusao",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -2960,
+          1568
+        ],
+        "id": "a0939fc8-5db1-4308-b9b8-ec848b61f73b"
+      },
+      {
+        "parameters": {
+          "content": "## LISTAR E EXCLUIR",
+          "height": 592,
+          "width": 1168,
+          "color": 2
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -3696,
+          1312
+        ],
+        "id": "fc50b2f8-05e0-4e69-8776-b3a0d46ebab8",
+        "name": "Sticky Note3"
+      },
+      {
+        "parameters": {
+          "path": "consultas_finalizadas",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -3472,
+          1712
+        ],
+        "id": "webhook-listar-consultas",
+        "name": "webhookListarConsultas",
+        "webhookId": "edc5ca0a-88b0-43cd-9a6a-7458a389f3a0"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COALESCE(json_agg(t), '[]'::json) as all_consultas FROM (\n  SELECT \n    c.id as consulta_id,\n    c.status,\n    c.created_at as data_hora,\n    p.nome as paciente_nome,\n    COALESCE(c.pdf_url, 'https://bkkdexuzrjouafrwzdsw.supabase.co/storage/v1/object/public/prontuarios_pdf/' || c.id || '.pdf') as pdf_url,\n    c.audio_url\n  FROM consultas c\n  JOIN pacientes p ON p.id = c.paciente_id\n  WHERE c.status = 'finalizado'\n  ORDER BY c.created_at DESC\n  LIMIT 20\n) t;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          -3216,
+          1712
+        ],
+        "id": "postgres-listar-consultas",
+        "name": "postgresListarConsultas",
+        "credentials": {
+          "postgres": {
+            "id": "dTt8zgBls4mFwspX",
+            "name": "prontuarioIA"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json.all_consultas }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          -2960,
+          1712
+        ],
+        "id": "respond-listar-consultas",
+        "name": "respondListarConsultas"
+      }
+    ],
+    "connections": {
+      "salvarprontuarioATT": {
+        "main": [
+          [
+            {
+              "node": "gerarHTML",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "updtconsulta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "htmlTofile": {
+        "main": [
+          [
+            {
+              "node": "converterPDF",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "subirTranscicao": {
+        "main": [
+          [
+            {
+              "node": "extrair prontuario AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "extrair prontuario AI": {
+        "main": [
+          [
+            {
+              "node": "ia_isOkay",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "criarConsulta": {
+        "main": [
+          [
+            {
+              "node": "stt_isOkay",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "supabaseAudio": {
+        "main": [
+          [
+            {
+              "node": "att_consultaAudio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "prepararDados": {
+        "main": [
+          [
+            {
+              "node": "stt_Groq",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "supabaseAudio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "buscaConsulta": {
+        "main": [
+          [
+            {
+              "node": "statusValido",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "converterPDF": {
+        "main": [
+          [
+            {
+              "node": "uploadPDFtoDB",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "cadastroPaciente": {
+        "main": [
+          [
+            {
+              "node": "validaEfiltrar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "ia_isOkay": {
+        "main": [
+          [
+            {
+              "node": "parse",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "error_ia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "statusValido": {
+        "main": [
+          [
+            {
+              "node": "criarVersaoMedico",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond to Webhook3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "validaEfiltrar": {
+        "main": [
+          [
+            {
+              "node": "criarPaciente",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "error_ia": {
+        "main": [
+          [
+            {
+              "node": "error_msg1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "saveProntuario": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "validarEntrada": {
+        "main": [
+          [
+            {
+              "node": "buscaConsulta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "updtconsulta": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "aprovarConsulta": {
+        "main": [
+          [
+            {
+              "node": "validarEntrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "criarPaciente": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "stt_isOkay": {
+        "main": [
+          [
+            {
+              "node": "subirTranscicao",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "error_tratamento",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "criarVersaoMedico": {
+        "main": [
+          [
+            {
+              "node": "salvarprontuarioATT",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "parse": {
+        "main": [
+          [
+            {
+              "node": "saveProntuario",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "novaConsulta": {
+        "main": [
+          [
+            {
+              "node": "prepararDados",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "uploadPDFtoDB": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "stt_Groq": {
+        "main": [
+          [
+            {
+              "node": "criarConsulta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "error_tratamento": {
+        "main": [
+          [
+            {
+              "node": "error_msg",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "gerarHTML": {
+        "main": [
+          [
+            {
+              "node": "htmlTofile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "extrair prontuario AI",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "listarPacientes": {
+        "main": [
+          [
+            {
+              "node": "listar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "listar": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "webhookExcluir": {
+        "main": [
+          [
+            {
+              "node": "postgresDelete",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "postgresDelete": {
+        "main": [
+          [
+            {
+              "node": "responseExclusao",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "webhookListarConsultas": {
+        "main": [
+          [
+            {
+              "node": "postgresListarConsultas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "postgresListarConsultas": {
+        "main": [
+          [
+            {
+              "node": "respondListarConsultas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Paulo  Goldner",
+    "name": null,
+    "description": null
+  }
+}
