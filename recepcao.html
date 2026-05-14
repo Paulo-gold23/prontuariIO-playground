@@ -229,6 +229,8 @@
                                         data-value="Bradesco Saúde">Bradesco Saúde</div>
                                     <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
                                         data-value="Medsênior">Medsênior</div>
+                                    <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm"
+                                        data-value="Best Senior">Best Senior</div>
                                     <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="Samp">
                                         Samp</div>
                                     <div class="option p-2 hover:bg-indigo-50 cursor-pointer text-sm" data-value="SUS">
@@ -606,21 +608,23 @@
     </div>
 
     <!-- Modal Termo de Consentimento Gerado -->
-    <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
-        <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-end sm:items-center justify-center" style="padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);">
+        <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm" onclick="fecharModalTermo()"></div>
+        <div class="relative w-full sm:max-w-3xl bg-white sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col" style="max-height: 92dvh; max-height: 92vh;">
             
-            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white">
-                <h3 class="text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800">Documento Formal: Termo de Consentimento</h3>
-                <button type="button" onclick="fecharModalTermo()" class="text-slate-400 hover:text-slate-600 transition-colors">
+            <!-- Header fixo -->
+            <div class="px-4 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white flex-shrink-0 rounded-t-2xl">
+                <h3 class="text-base sm:text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800 leading-tight">Termo de Consentimento</h3>
+                <button type="button" onclick="fecharModalTermo()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex-shrink-0 ml-2" aria-label="Fechar">
                     <i class="ph-bold ph-x text-lg"></i>
                 </button>
             </div>
             
-            <div id="termo-imprimir" class="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white font-serif text-slate-800 text-sm leading-relaxed" style="max-height: 60vh; display: flex; flex-direction: column;">
-                <div class="text-center mb-8">
-                    <h2 class="text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
-                    <h3 class="font-bold mt-2 uppercase text-slate-700">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
+            <!-- Área de scroll do documento -->
+            <div id="termo-imprimir" class="p-5 sm:p-8 overflow-y-auto custom-scrollbar bg-white font-serif text-slate-800 text-sm leading-relaxed flex-1" style="-webkit-overflow-scrolling: touch;">
+                <div class="text-center mb-6">
+                    <h2 class="text-xl sm:text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
+                    <h3 class="font-bold mt-2 uppercase text-slate-700 text-sm">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
                 </div>
                 
                 <p class="mb-4 text-justify">
@@ -640,46 +644,55 @@
                 </p>
                 
                 <!-- Bloco de assinatura — preenchido dinamicamente via JS em avancarParaTermo() -->
-                <div id="bloco-assinatura-termo" style="margin-top: auto; padding-top: 48px;">
-
-                    <!-- Campos side by side -->
-                    <div style="display: flex; gap: 48px; align-items: flex-end;">
-
-                        <!-- Coluna Esquerda: Paciente -->
+                <div id="bloco-assinatura-termo" style="margin-top: 48px; padding-top: 0;">
+                    <div style="display: flex; gap: 32px; align-items: flex-end;">
                         <div style="flex: 1;">
                             <p id="assinatura-nome-paciente" style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 0;">&nbsp;</p>
                             <div style="border-bottom: 1.5px solid #1e293b; width: 100%; margin-top: 36px; margin-bottom: 6px;"></div>
                             <p style="font-size: 10px; color: #64748b; text-align: center;">Assinatura do(a) Paciente</p>
                         </div>
-
-                        <!-- Coluna Direita: Clínica -->
                         <div style="flex: 1;">
                             <p style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 0;">Clínica Cicatrize</p>
                             <div style="border-bottom: 1.5px solid #1e293b; width: 100%; margin-top: 36px; margin-bottom: 6px;"></div>
                             <p style="font-size: 10px; color: #64748b; text-align: center;">Responsável / Clínica</p>
                         </div>
-
                     </div>
-
-                    <!-- Data e Hora — linha separada abaixo dos campos -->
                     <p id="assinatura-data-hora" style="margin-top: 14px; font-size: 10px; color: #64748b; text-align: right;">&nbsp;</p>
-
                 </div>
             </div>
 
-            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">
-                    <i class="ph-bold ph-printer"></i> Imprimir Documento
-                </button>
-                
-                <div class="flex items-center gap-4 w-full sm:w-auto">
-                    <label class="flex items-center gap-2 cursor-pointer p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                        <input type="checkbox" id="chk_termo_aceito" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 bg-white">
-                        <span class="text-sm font-bold text-emerald-800 whitespace-nowrap">Paciente concorda e assina virtualmente</span>
+            <!-- Footer de ações — fixo, nunca clipado pelo overflow -->
+            <div class="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex-shrink-0" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
+                <!-- Linha 1 mobile: botão imprimir (secundário) -->
+                <div class="hidden sm:flex justify-between items-center gap-4">
+                    <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">
+                        <i class="ph-bold ph-printer"></i> Imprimir Documento
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <label id="label_termo_aceito" class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200 select-none" style="-webkit-tap-highlight-color: transparent;">
+                            <input type="checkbox" id="chk_termo_aceito_desktop" class="w-5 h-5 rounded border-2 border-emerald-400 text-emerald-600 focus:ring-emerald-500 bg-white cursor-pointer flex-shrink-0" style="min-width: 20px; min-height: 20px;">
+                            <span class="text-sm font-bold text-emerald-800">Paciente concorda e assina virtualmente</span>
+                        </label>
+                        <button type="button" onclick="confirmarAgendamentoEGerar()" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 flex-shrink-0">
+                            <i class="ph-bold ph-check-circle"></i> Efetivar Cadastro
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Layout mobile: empilhado vertical para touch targets adequados -->
+                <div class="flex flex-col gap-3 sm:hidden">
+                    <!-- Checkbox de aceite — área grande, fácil de tocar no iPhone -->
+                    <label id="label_termo_aceito_mobile" class="flex items-center gap-3 cursor-pointer px-4 py-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 select-none active:bg-emerald-100 transition-colors" style="-webkit-tap-highlight-color: transparent;">
+                        <input type="checkbox" id="chk_termo_aceito" class="flex-shrink-0 rounded border-2 border-emerald-400 text-emerald-600 bg-white cursor-pointer" style="width: 24px; height: 24px; min-width: 24px; min-height: 24px; appearance: auto; -webkit-appearance: checkbox;">
+                        <span class="text-sm font-bold text-emerald-800 leading-snug">Li e concordo com o Termo de Consentimento. Assino virtualmente.</span>
                     </label>
-                    
-                    <button type="button" onclick="confirmarAgendamentoEGerar()" class="px-6 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
-                        <i class="ph-bold ph-check-circle"></i> Efetivar Cadastro
+                    <!-- Botão principal — altura mínima de 52px para iOS -->
+                    <button type="button" onclick="confirmarAgendamentoEGerar()" class="w-full flex items-center justify-center gap-2 text-base font-bold text-white bg-emerald-600 active:bg-emerald-800 rounded-2xl shadow-md transition-colors" style="min-height: 52px; -webkit-tap-highlight-color: transparent;">
+                        <i class="ph-bold ph-check-circle text-lg"></i> Efetivar Cadastro
+                    </button>
+                    <!-- Botão imprimir secundário -->
+                    <button type="button" onclick="imprimirTermo()" class="w-full flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl transition-colors" style="min-height: 44px;">
+                        <i class="ph-bold ph-printer"></i> Imprimir Documento
                     </button>
                 </div>
             </div>
@@ -1542,6 +1555,9 @@
             document.getElementById('txt_historico_familiar').value = '';
             document.getElementById('txt_observacoes').value = '';
             document.getElementById('chk_termo_aceito').checked = false;
+            if (document.getElementById('chk_termo_aceito_desktop')) {
+                document.getElementById('chk_termo_aceito_desktop').checked = false;
+            }
         }
 
         function avancarParaTermo() {
@@ -1613,7 +1629,10 @@
         async function confirmarAgendamentoEGerar() {
             if (!dadosCadastroTemporario) return;
             
-            const termoAceito = document.getElementById('chk_termo_aceito').checked;
+            // Lê de qualquer checkbox visível (desktop ou mobile)
+            const chkDesktop = document.getElementById('chk_termo_aceito_desktop');
+            const chkMobile = document.getElementById('chk_termo_aceito');
+            const termoAceito = (chkDesktop && chkDesktop.checked) || (chkMobile && chkMobile.checked);
             if (!termoAceito) {
                 showCustomAlert("O aceite do Termo de Consentimento (físico ou digital) é obrigatório.", "Atenção");
                 return;
