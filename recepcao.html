@@ -465,10 +465,16 @@
         <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-down">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
-                <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
-                    <i class="ph-bold ph-heartbeat text-indigo-600"></i> Questionário de Saúde Pré-Clínico
-                </h3>
-                <button type="button" onclick="fecharModalAnamnese()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                        <i class="ph-bold ph-heartbeat text-indigo-600"></i> Questionário de Saúde
+                    </h3>
+                    <!-- STEPPER A: indica que este é o passo 1 de 2 do fluxo de cadastro -->
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex-shrink-0">
+                        <i class="ph-bold ph-steps text-indigo-500"></i> Passo 1 de 2
+                    </span>
+                </div>
+                <button type="button" onclick="fecharModalAnamnese()" class="text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0 ml-2">
                     <i class="ph-bold ph-x text-lg"></i>
                 </button>
             </div>
@@ -598,11 +604,20 @@
                 </div>
             </div>
 
-            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-                <button type="button" onclick="fecharModalAnamnese()" class="px-5 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors">Cancelar</button>
-                <button type="button" onclick="avancarParaTermo()" class="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
-                    Avançar para Termo <i class="ph-bold ph-arrow-right"></i>
-                </button>
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 rounded-b-2xl">
+                <!-- SPRINT 3 · ITEM F: contador de condições marcadas -->
+                <div class="flex items-center gap-2">
+                    <span id="contador_condicoes" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 transition-all">
+                        <i class="ph-bold ph-list-checks"></i>
+                        <span id="contador_condicoes_texto">Nenhuma condição marcada</span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="fecharModalAnamnese()" class="px-5 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors">Cancelar</button>
+                    <button type="button" onclick="avancarParaTermo()" class="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
+                        Avançar para Termo <i class="ph-bold ph-arrow-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -614,7 +629,13 @@
             
             <!-- Header fixo -->
             <div class="px-4 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white flex-shrink-0 rounded-t-2xl">
-                <h3 class="text-base sm:text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800 leading-tight">Termo de Consentimento</h3>
+                <div class="flex items-center gap-3">
+                    <h3 class="text-base sm:text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800 leading-tight">Termo de Consentimento</h3>
+                    <!-- STEPPER A: indica que este é o passo 2 (último) do fluxo de cadastro -->
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex-shrink-0">
+                        <i class="ph-bold ph-check-circle text-emerald-500"></i> Passo 2 de 2
+                    </span>
+                </div>
                 <button type="button" onclick="fecharModalTermo()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex-shrink-0 ml-2" aria-label="Fechar">
                     <i class="ph-bold ph-x text-lg"></i>
                 </button>
@@ -663,17 +684,33 @@
 
             <!-- Footer de ações — fixo, nunca clipado pelo overflow -->
             <div class="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex-shrink-0" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
-                <!-- Linha 1 mobile: botão imprimir (secundário) -->
+                <!-- Linha 1 desktop: botão imprimir (esquerda) + ITEM D botão Voltar (esquerda) -->
                 <div class="hidden sm:flex justify-between items-center gap-4">
-                    <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">
-                        <i class="ph-bold ph-printer"></i> Imprimir Documento
-                    </button>
-                    <div class="flex items-center gap-3">
-                        <label id="label_termo_aceito" class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200 select-none" style="-webkit-tap-highlight-color: transparent;">
-                            <input type="checkbox" id="chk_termo_aceito_desktop" class="w-5 h-5 rounded border-2 border-emerald-400 text-emerald-600 focus:ring-emerald-500 bg-white cursor-pointer flex-shrink-0" style="min-width: 20px; min-height: 20px;">
+                    <div class="flex items-center gap-2">
+                        <!-- SPRINT 2 · ITEM D: Voltar para Anamnese -->
+                        <button type="button" onclick="voltarParaAnamnese()" class="px-3 py-2 flex items-center gap-1.5 text-sm font-bold text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                            <i class="ph-bold ph-arrow-left"></i> Voltar
+                        </button>
+                        <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors">
+                            <i class="ph-bold ph-printer"></i> Imprimir Documento
+                        </button>
+                    </div>
+                        <!-- SPRINT 3 · ITEM E: Toggle switch desktop -->
+                        <!-- O input hidden preserva os IDs usados pelo JS (syncBtnState). -->
+                        <label id="label_termo_aceito" class="flex items-center gap-2.5 cursor-pointer px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200 select-none transition-colors" style="-webkit-tap-highlight-color: transparent;">
+                            <input type="checkbox" id="chk_termo_aceito_desktop" class="sr-only">
+                            <!-- Pill do toggle -->
+                            <span class="toggle-pill flex-shrink-0" aria-hidden="true"
+                                style="position: relative; display: inline-flex; align-items: center; width: 42px; height: 24px; border-radius: 9999px; background: #cbd5e1; transition: background 0.2s; flex-shrink: 0;">
+                                <span class="toggle-knob"
+                                    style="position: absolute; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s, box-shadow 0.2s;"></span>
+                            </span>
                             <span class="text-sm font-bold text-emerald-800">Paciente concorda e assina virtualmente</span>
                         </label>
-                        <button type="button" onclick="confirmarAgendamentoEGerar()" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 flex-shrink-0">
+                        <!-- ITEM B: botão desktop desabilitado até checkbox ser marcado -->
+                        <button id="btn_efetivar_desktop" type="button" onclick="confirmarAgendamentoEGerar()" disabled
+                            class="px-5 py-2.5 text-sm font-bold text-white bg-slate-300 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-not-allowed"
+                            style="transition: background-color 0.2s, transform 0.1s;">
                             <i class="ph-bold ph-check-circle"></i> Efetivar Cadastro
                         </button>
                     </div>
@@ -681,23 +718,66 @@
 
                 <!-- Layout mobile: empilhado vertical para touch targets adequados -->
                 <div class="flex flex-col gap-3 sm:hidden">
-                    <!-- Checkbox de aceite — área grande, fácil de tocar no iPhone -->
-                    <label id="label_termo_aceito_mobile" class="flex items-center gap-3 cursor-pointer px-4 py-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 select-none active:bg-emerald-100 transition-colors" style="-webkit-tap-highlight-color: transparent;">
-                        <input type="checkbox" id="chk_termo_aceito" class="flex-shrink-0 rounded border-2 border-emerald-400 text-emerald-600 bg-white cursor-pointer" style="width: 24px; height: 24px; min-width: 24px; min-height: 24px; appearance: auto; -webkit-appearance: checkbox;">
-                        <span class="text-sm font-bold text-emerald-800 leading-snug">Li e concordo com o Termo de Consentimento. Assino virtualmente.</span>
+                    <!-- SPRINT 3 · ITEM E: Toggle switch mobile -->
+                    <!-- O input hidden preserva o ID chk_termo_aceito usado pelo JS. -->
+                    <label id="label_termo_aceito_mobile" class="flex items-center gap-4 cursor-pointer px-4 py-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 transition-colors" style="-webkit-tap-highlight-color: transparent;">
+                        <input type="checkbox" id="chk_termo_aceito" class="sr-only">
+                        <!-- Pill maior para touch target confortável no iOS -->
+                        <span class="toggle-pill flex-shrink-0" aria-hidden="true"
+                            style="position: relative; display: inline-flex; align-items: center; width: 54px; height: 30px; border-radius: 9999px; background: #cbd5e1; transition: background 0.25s; flex-shrink: 0;">
+                            <span class="toggle-knob"
+                                style="position: absolute; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.25s, box-shadow 0.25s;"></span>
+                        </span>
+                        <span class="text-sm font-bold text-emerald-800 leading-snug select-none" style="-webkit-user-select: none;">Li e concordo com o Termo de Consentimento. Assino virtualmente.</span>
                     </label>
-                    <!-- Botão principal — altura mínima de 52px para iOS -->
-                    <button type="button" onclick="confirmarAgendamentoEGerar()" class="w-full flex items-center justify-center gap-2 text-base font-bold text-white bg-emerald-600 active:bg-emerald-800 rounded-2xl shadow-md transition-colors" style="min-height: 52px; -webkit-tap-highlight-color: transparent;">
+                    <!-- ITEM B: botão mobile desabilitado até checkbox ser marcado -->
+                    <button id="btn_efetivar_mobile" type="button" onclick="confirmarAgendamentoEGerar()" disabled
+                        class="w-full flex items-center justify-center gap-2 text-base font-bold text-white bg-slate-300 rounded-2xl shadow-sm transition-all cursor-not-allowed"
+                        style="min-height: 52px; -webkit-tap-highlight-color: transparent; transition: background-color 0.2s, transform 0.1s;">
                         <i class="ph-bold ph-check-circle text-lg"></i> Efetivar Cadastro
                     </button>
-                    <!-- Botão imprimir secundário -->
-                    <button type="button" onclick="imprimirTermo()" class="w-full flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl transition-colors" style="min-height: 44px;">
-                        <i class="ph-bold ph-printer"></i> Imprimir Documento
+                    <!-- ITEM G: no mobile abre em nova aba (Blob URL) em vez do print dialog -->
+                    <button type="button" onclick="verTermoMobile()" class="w-full flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-xl transition-colors active:bg-slate-50" style="min-height: 44px;">
+                        <i class="ph-bold ph-arrow-square-out"></i> Ver / Guardar Termo
+                    </button>
+                    <!-- SPRINT 2 · ITEM D: Voltar para Anamnese (mobile) -->
+                    <button type="button" onclick="voltarParaAnamnese()" class="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 bg-transparent transition-colors py-1">
+                        <i class="ph-bold ph-arrow-left text-sm"></i> Voltar para o Questionário
                     </button>
                 </div>
             </div>
         </div>
+
+        <!-- SPRINT 2 · ITEM C: Overlay de sucesso animado -->
+        <!-- Aparece por cima do conteúdo do modal após efetivar o cadastro.
+             Exibido via showSucessoCadastro(nomePaciente) e fechado em 4s ou no clique. -->
+        <div id="overlay_sucesso_cadastro" class="hidden absolute inset-0 z-20 flex flex-col items-center justify-center rounded-t-2xl sm:rounded-2xl" style="background: rgba(255,255,255,0.97); backdrop-filter: blur(4px);">
+            <div class="flex flex-col items-center gap-5 px-8 text-center animate-fade-in-down">
+                <!-- Ícone animado -->
+                <div id="icone_sucesso" class="flex items-center justify-center rounded-full bg-emerald-100 border-4 border-emerald-400" style="width: 88px; height: 88px; animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;">
+                    <i class="ph-bold ph-check-circle" style="font-size: 48px; color: #059669;"></i>
+                </div>
+                <!-- Mensagem -->
+                <div>
+                    <p class="text-2xl font-bold text-slate-900 mb-1">Cadastro Realizado!</p>
+                    <p id="sucesso_nome_paciente" class="text-base text-emerald-700 font-semibold mb-1"></p>
+                    <p class="text-sm text-slate-500">Anamnese e Termo de Consentimento salvos.</p>
+                </div>
+                <!-- Botão para fechar manualmente -->
+                <button type="button" onclick="fecharOverlaySucesso()" class="mt-2 px-8 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl shadow-md transition-colors" style="min-height: 48px;">
+                    <i class="ph-bold ph-arrow-left"></i> Novo Cadastro
+                </button>
+            </div>
+        </div>
     </div>
+</div>
+
+<style>
+    @keyframes popIn {
+        0%   { transform: scale(0.4); opacity: 0; }
+        100% { transform: scale(1);   opacity: 1; }
+    }
+</style>
 
 
     <!-- Modal de Confirmação Customizado -->
@@ -1691,16 +1771,31 @@
 
                 if (result) {
                     let pacienteId = result.id || result.paciente_id;
+
+                    // BUG FIX #2: Fallback busca pacienteId com filtro de medico_id
+                    // para não retornar o paciente errado em clínicas multi-tenant.
+                    // Também trocado .single() por .maybeSingle() para não lançar
+                    // exceção quando nenhuma linha é encontrada.
                     if (!pacienteId && window.supabaseClient) {
-                         const { data: fetchPac } = await window.supabaseClient
+                        const medicoIdFallback = window.getMedicoId ? window.getMedicoId() : null;
+                        const query = window.supabaseClient
                             .from('pacientes')
                             .select('id')
                             .eq('nome', data.nome)
                             .eq('telefone', data.telefone)
                             .order('created_at', { ascending: false })
-                            .limit(1)
-                            .single();
-                         if (fetchPac) pacienteId = fetchPac.id;
+                            .limit(1);
+                        if (medicoIdFallback) query.eq('medico_id', medicoIdFallback);
+                        const { data: fetchPac, error: fetchErr } = await query.maybeSingle();
+                        if (fetchErr) console.warn('[recepcao] Fallback pacienteId falhou:', fetchErr);
+                        if (fetchPac) pacienteId = fetchPac.id;
+                    }
+
+                    // BUG FIX #3: Se mesmo após o fallback não temos o ID, logar
+                    // claramente e exibir aviso ao usuário em vez de falhar silenciosamente.
+                    if (!pacienteId) {
+                        console.error('[recepcao] pacienteId não retornado pelo webhook nem encontrado no fallback. Anamnese e Termo NÃO foram salvos.');
+                        showCustomAlert('O paciente foi criado, mas não foi possível registrar a Anamnese e o Termo de Consentimento automaticamente. Por favor, acesse o perfil do paciente para completar o cadastro.', 'Atenção: Registro Incompleto');
                     }
 
                     if (pacienteId && window.supabaseClient) {
@@ -1728,8 +1823,13 @@
                         }
                     }
 
-                    statusDiv.textContent = "✅ Paciente cadastrado com sucesso!";
-                    statusDiv.className = "status-message success";
+                    statusDiv.textContent = "";
+                    statusDiv.className = "success";
+
+                    // SPRINT 2 · ITEM C: exibe tela de sucesso animada dentro do modal
+                    const nomePaciente = data.nome || 'Paciente';
+                    showSucessoCadastro(nomePaciente);
+
                     if (eTarget) eTarget.reset();
 
                     document.querySelectorAll('.selected-text').forEach(s => {
@@ -1757,6 +1857,53 @@
             fecharModalAnamnese(); // Limpa variaveis temporarias
         }
 
+        // === SPRINT 2 · ITEM C: Overlay de sucesso ===
+        // Exibe o overlay por cima do conteúdo do modal Termo com animação.
+        // Fecha automaticamente após 4 segundos ou quando o usuário clica em "Novo Cadastro".
+        function showSucessoCadastro(nomePaciente) {
+            const overlay = document.getElementById('overlay_sucesso_cadastro');
+            const nomeEl  = document.getElementById('sucesso_nome_paciente');
+            if (!overlay) return;
+
+            if (nomeEl) nomeEl.textContent = nomePaciente;
+            overlay.classList.remove('hidden');
+
+            // Reinicia a animação do ícone (remove e re-adiciona o elemento para reiniciar keyframes)
+            const icone = document.getElementById('icone_sucesso');
+            if (icone) {
+                icone.style.animation = 'none';
+                requestAnimationFrame(() => {
+                    icone.style.animation = 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both';
+                });
+            }
+
+            // Auto-fechar e limpar após 4 segundos
+            setTimeout(() => fecharOverlaySucesso(), 4000);
+        }
+
+        function fecharOverlaySucesso() {
+            const overlay = document.getElementById('overlay_sucesso_cadastro');
+            if (overlay) overlay.classList.add('hidden');
+            fecharModalTermo();
+            fecharModalAnamnese();
+            // Restaura os checkboxes e botões para o estado inicial (pronto para novo cadastro)
+            ['chk_termo_aceito', 'chk_termo_aceito_desktop'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.checked = false; el.dispatchEvent(new Event('change', { bubbles: true })); }
+            });
+        }
+
+        // === SPRINT 2 · ITEM D: Voltar para Anamnese ===
+        // Fecha o Modal Termo e reabre a Anamnese preservando todos os dados
+        // preenchidos (dadosCadastroTemporario continua em memória).
+        function voltarParaAnamnese() {
+            document.getElementById('modalTermoConsentimento').classList.add('hidden');
+            document.getElementById('modalChecklistAnamnese').classList.remove('hidden');
+            // Garante que o overlay de sucesso não fique visível ao retornar
+            const overlay = document.getElementById('overlay_sucesso_cadastro');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
         document.getElementById('formCadastro').addEventListener('submit', async (e) => {
             e.preventDefault();
             const statusDiv = document.getElementById('statusCadastro');
@@ -1775,6 +1922,16 @@
             if (data.data_nascimento && data.data_nascimento.includes('/')) {
                 const parts = data.data_nascimento.split('/');
                 if (parts.length === 3) data.data_nascimento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            // BUG FIX #1: Remove campos de responsável vazios para não enviar
+            // strings vazias ao n8n (responsavel_nome= & responsavel_parentesco=)
+            // que podem causar erros silenciosos no workflow.
+            if (!data.responsavel_nome || data.responsavel_nome.trim() === '') {
+                delete data.responsavel_nome;
+            }
+            if (!data.responsavel_parentesco || data.responsavel_parentesco.trim() === '') {
+                delete data.responsavel_parentesco;
             }
 
             if (pacienteEmEdicao) {
@@ -1870,6 +2027,210 @@
                 label.classList.add('bg-indigo-100','border-indigo-400','text-indigo-800');
             });
         });
+
+        // === SPRINT 1 · ITEM B + FIX iOS + SPRINT 3 · ITEM E (Toggle): Checkboxes do Termo ===
+        (function() {
+            const chkMobile    = document.getElementById('chk_termo_aceito');
+            const chkDesktop   = document.getElementById('chk_termo_aceito_desktop');
+            const labelMobile  = document.getElementById('label_termo_aceito_mobile');
+            const labelDesktop = document.getElementById('label_termo_aceito');
+            const btnMobile    = document.getElementById('btn_efetivar_mobile');
+            const btnDesktop   = document.getElementById('btn_efetivar_desktop');
+
+            // SPRINT 3 · ITEM E: Anima a pill do toggle e o knob deslizante.
+            // A pill e o knob estão dentro do label — buscamos pelo label pai.
+            function animateToggle(label, checked, isMobile) {
+                if (!label) return;
+                const pill  = label.querySelector('.toggle-pill');
+                const knob  = label.querySelector('.toggle-knob');
+                if (!pill || !knob) return;
+
+                const offset = isMobile
+                    ? `${54 - 24 - 3}px`   // width(54) - knob(24) - left(3)
+                    : `${42 - 18 - 3}px`;   // width(42) - knob(18) - left(3)
+
+                if (checked) {
+                    pill.style.background = '#059669';  // emerald-600
+                    knob.style.transform  = `translateX(${offset})`;
+                    knob.style.boxShadow  = isMobile
+                        ? '0 2px 6px rgba(5,150,105,0.4)'
+                        : '0 1px 4px rgba(5,150,105,0.35)';
+                } else {
+                    pill.style.background = '#cbd5e1';  // slate-300
+                    knob.style.transform  = 'translateX(0)';
+                    knob.style.boxShadow  = isMobile
+                        ? '0 2px 4px rgba(0,0,0,0.2)'
+                        : '0 1px 3px rgba(0,0,0,0.25)';
+                }
+            }
+
+            function syncBtnState(chk, btn, label, isMobile) {
+                if (!btn || !chk) return;
+                const checked = chk.checked;
+
+                // --- Botão ---
+                if (checked) {
+                    btn.disabled = false;
+                    btn.classList.remove('bg-slate-300', 'cursor-not-allowed');
+                    btn.classList.add(
+                        'bg-emerald-600',
+                        isMobile ? 'active:bg-emerald-800' : 'hover:bg-emerald-700',
+                        isMobile ? 'shadow-md' : 'shadow-sm',
+                        'cursor-pointer'
+                    );
+                } else {
+                    btn.disabled = true;
+                    btn.classList.remove(
+                        'bg-emerald-600',
+                        'hover:bg-emerald-700', 'active:bg-emerald-800',
+                        'shadow-md', 'shadow-sm', 'cursor-pointer'
+                    );
+                    btn.classList.add('bg-slate-300', 'cursor-not-allowed');
+                }
+
+                // --- Label (borda e fundo) ---
+                if (label) {
+                    if (checked) {
+                        label.classList.remove(isMobile ? 'border-emerald-300' : 'border-emerald-200');
+                        label.classList.add('border-emerald-500', 'bg-emerald-100');
+                    } else {
+                        label.classList.remove('border-emerald-500', 'bg-emerald-100');
+                        label.classList.add(isMobile ? 'border-emerald-300' : 'border-emerald-200');
+                    }
+                }
+
+                // --- Toggle visual (Sprint 3 E) ---
+                animateToggle(label, checked, isMobile);
+            }
+
+            // --- Listener MOBILE ---
+            if (chkMobile) {
+                chkMobile.addEventListener('change', () => syncBtnState(chkMobile, btnMobile, labelMobile, true));
+                // FIX iOS: o input tem classe sr-only então o clique sempre chega no label.
+                // Fazemos o toggle manualmente.
+                if (labelMobile) {
+                    labelMobile.addEventListener('click', (e) => {
+                        if (e.target === chkMobile) return;
+                        e.preventDefault();
+                        chkMobile.checked = !chkMobile.checked;
+                        chkMobile.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                }
+            }
+
+            // --- Listener DESKTOP ---
+            if (chkDesktop) {
+                chkDesktop.addEventListener('change', () => syncBtnState(chkDesktop, btnDesktop, labelDesktop, false));
+                if (labelDesktop) {
+                    labelDesktop.addEventListener('click', (e) => {
+                        if (e.target === chkDesktop) return;
+                        e.preventDefault();
+                        chkDesktop.checked = !chkDesktop.checked;
+                        chkDesktop.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                }
+            }
+        })();
+
+        // === SPRINT 3 · ITEM F: Contador de condições na Anamnese ===
+        // Atualiza o badge "X condições marcadas" em tempo real enquanto
+        // a secretária/paciente preenche o Questionário de Saúde.
+        (function() {
+            // Seletores dos checkboxes de condições dentro do modal da Anamnese
+            // (exclui checkboxes de tipo_pele que são radio visuais, não condições)
+            const modalAnamnese = document.getElementById('modalChecklistAnamnese');
+            if (!modalAnamnese) return;
+
+            const contadorEl  = document.getElementById('contador_condicoes');
+            const textoEl     = document.getElementById('contador_condicoes_texto');
+            if (!contadorEl || !textoEl) return;
+
+            function atualizarContador() {
+                // Conta apenas inputs checkbox reais dentro do modal (não os de tipo_pele)
+                const todos     = modalAnamnese.querySelectorAll('input[type="checkbox"]:not(.tipo-pele-radio)');
+                const marcados  = Array.from(todos).filter(c => c.checked).length;
+
+                if (marcados === 0) {
+                    textoEl.textContent = 'Nenhuma condição marcada';
+                    contadorEl.classList.remove('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                    contadorEl.classList.add('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                } else {
+                    const label = marcados === 1 ? 'condição marcada' : 'condições marcadas';
+                    textoEl.textContent = `${marcados} ${label}`;
+                    contadorEl.classList.remove('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                    contadorEl.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+                }
+            }
+
+            // Registra listener em cada checkbox de condição
+            modalAnamnese.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                chk.addEventListener('change', atualizarContador);
+            });
+
+            // Reseta o contador quando o modal é fechado/reaberto
+            // (fecharModalAnamnese já reseta os campos; observamos o hidden)
+            const observer = new MutationObserver(() => {
+                if (modalAnamnese.classList.contains('hidden')) atualizarContador();
+            });
+            observer.observe(modalAnamnese, { attributes: true, attributeFilter: ['class'] });
+        })();
+
+        // === SPRINT 1 · ITEM G: Ver Termo em Nova Aba (mobile-friendly) ===
+        // Em vez de chamar window.print() (que no iOS abre um sheet confuso),
+        // geramos um HTML completo via Blob URL e abrimos em nova aba.
+        // O usuário pode então usar o botão ⬆️ de compartilhamento do Safari
+        // para "Salvar em Arquivos", imprimir, enviar por WhatsApp, etc.
+        function verTermoMobile() {
+            const termoEl = document.getElementById('termo-imprimir');
+            if (!termoEl) return;
+
+            const conteudo = termoEl.innerHTML;
+            const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termo de Consentimento - Clínica Cicatrize</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #0f172a;
+            background: #fff;
+            padding: 32px 24px;
+            max-width: 780px;
+            margin: 0 auto;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        h2, h3 { font-family: Georgia, serif; }
+        p { margin-bottom: 16px; text-align: justify; }
+        strong { font-weight: 700; }
+        @media print {
+            body { padding: 20px 16px; }
+            @page { margin: 20mm; }
+        }
+    </style>
+</head>
+<body>${conteudo}</body>
+</html>`;
+
+            try {
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                const url  = URL.createObjectURL(blob);
+                const aba  = window.open(url, '_blank');
+                // Libera a URL do blob após 2 minutos (tempo suficiente para o navegador carregar)
+                setTimeout(() => URL.revokeObjectURL(url), 120000);
+                if (!aba) {
+                    // Bloqueador de pop-up ativado — fallback: avisa o usuário
+                    alert('Por favor, permita pop-ups para este site e tente novamente.');
+                }
+            } catch (err) {
+                console.error('[verTermoMobile] Erro ao gerar Blob URL:', err);
+                // Fallback para impressão normal caso o Blob falhe
+                imprimirTermo();
+            }
+        }
     </script>
 </body>
 
