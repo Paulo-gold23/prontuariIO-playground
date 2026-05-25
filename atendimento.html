@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atendimento Médico - prontuar.IO</title>
+    <meta name="description" content="Página de atendimento médico do prontuar.IO. Realize consultas, grave áudios e assine prontuários." />
+    <meta property="og:title" content="Atendimento Médico - prontuar.IO" />
+    <meta property="og:description" content="Página de atendimento médico. Realize consultas, grave áudios e assine prontuários." />
+    <meta property="og:type" content="website" />
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -511,7 +515,7 @@
                     <div class="flex items-center gap-3">
                         <!-- BOTÃO CÂMERA -->
                         <button onclick="capturarFoto()"
-                            class="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95">
+                            class="px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-100 transition-all flex items-center gap-2 active:scale-95">
                             <i class="ph-fill ph-camera text-lg"></i>
                             Registrar Foto
                         </button>
@@ -527,12 +531,12 @@
                 <div id="fotosContainer" class="hidden mt-6 pt-5 border-t border-slate-100">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
-                            <i class="ph-fill ph-images text-indigo-500 text-lg"></i>
+                            <i class="ph-fill ph-images text-emerald-500 text-lg"></i>
                             <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Fotos da Consulta</span>
-                            <span id="fotosContador" class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-black rounded-full">0 foto(s)</span>
+                            <span id="fotosContador" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">0 foto(s)</span>
                         </div>
                         <button onclick="capturarFoto()"
-                            class="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors">
+                            class="text-xs font-bold text-emerald-500 hover:text-emerald-700 flex items-center gap-1 transition-colors">
                             <i class="ph-bold ph-plus"></i> Adicionar
                         </button>
                     </div>
@@ -735,6 +739,68 @@
                                 Nenhum produto selecionado ainda.
                             </p>
                         </div>
+
+                        <!-- ── SEÇÃO DE ASSINATURA STYLUS ── -->
+                        <div id="secaoAssinaturasStylus" class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <!-- Assinatura do Médico -->
+                            <div class="flex flex-col gap-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <i class="ph-bold ph-pen-nib text-emerald-600"></i>
+                                        Assinatura do Profissional Responsável
+                                    </label>
+                                    <button id="btnLimparAssinaturaMedico" type="button" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors flex items-center gap-1">
+                                        <i class="ph-bold ph-trash-simple"></i> Limpar
+                                    </button>
+                                </div>
+                                
+                                <!-- Checkbox para usar carimbo do perfil -->
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="chkUsarCarimbo" class="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500">
+                                    <label for="chkUsarCarimbo" class="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Usar carimbo e assinatura salvos no perfil</label>
+                                </div>
+
+                                <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
+                                    <canvas id="canvasAssinaturaMedico"></canvas>
+                                    <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
+                                        Assine aqui (Responsável)
+                                    </div>
+                                    
+                                    <!-- Overlay para carimbo/assinatura salvos -->
+                                    <div id="overlayAssinaturaSalva" class="hidden absolute inset-0 bg-slate-50/90 dark:bg-slate-50/90 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center z-10 transition-all">
+                                        <img id="imgAssinaturaSalva" class="max-h-20 object-contain mb-1.5 opacity-95" alt="Assinatura Salva">
+                                        <div id="txtCarimboSalvo" class="text-[10px] font-bold text-slate-600 dark:text-slate-700 leading-tight"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 font-semibold px-1">
+                                    <span id="metaAssinaturaMedicoIP">IP: Carregando...</span>
+                                    <span id="metaAssinaturaMedicoTime">Aguardando assinatura...</span>
+                                </div>
+                            </div>
+
+                            <!-- Assinatura do Paciente -->
+                            <div class="flex flex-col gap-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <i class="ph-bold ph-user-focus text-emerald-600"></i>
+                                        Assinatura do Paciente / Responsável Legal
+                                    </label>
+                                    <button id="btnLimparAssinaturaPaciente" type="button" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors flex items-center gap-1">
+                                        <i class="ph-bold ph-trash-simple"></i> Limpar
+                                    </button>
+                                </div>
+                                <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
+                                    <canvas id="canvasAssinaturaPaciente"></canvas>
+                                    <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
+                                        Assine aqui (Paciente)
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 font-semibold px-1">
+                                    <span id="metaAssinaturaPacienteIP">IP: Carregando...</span>
+                                    <span id="metaAssinaturaPacienteTime">Aguardando assinatura...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-4 justify-end pt-8">
@@ -768,7 +834,7 @@
 
                         <!-- PDF Imagens (só aparece se tiver fotos) -->
                         <a id="btnRelatorioImagens" href="#"
-                            class="hidden px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
+                            class="hidden px-8 py-4 bg-slate-700 text-white font-bold rounded-2xl shadow-lg shadow-slate-100 hover:bg-slate-800 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
                             <i class="ph-fill ph-images text-2xl"></i> PDF IMAGENS
                         </a>
 
@@ -897,7 +963,7 @@
                  class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center
-                                bg-gradient-to-br from-indigo-700 to-indigo-500 shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
+                                bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]">
                         <i class="ph-fill ph-camera text-xl text-white"></i>
                     </div>
                     <div>
@@ -928,12 +994,12 @@
                         class="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all
                                border-[1.5px] border-slate-200 dark:border-slate-700
                                bg-white dark:bg-slate-900
-                               hover:border-indigo-400 dark:hover:border-indigo-500
-                               hover:bg-indigo-50 dark:hover:bg-slate-800
-                               hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-4px_rgba(99,102,241,0.15)]">
+                               hover:border-teal-400 dark:hover:border-teal-500
+                               hover:bg-teal-50 dark:hover:bg-slate-800
+                               hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-4px_rgba(20,184,166,0.15)]">
                     <div class="w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center
-                                bg-gradient-to-br from-indigo-700 to-indigo-400
-                                shadow-[0_4px_12px_rgba(99,102,241,0.25)]">
+                                bg-gradient-to-br from-teal-600 to-teal-400
+                                shadow-[0_4px_12px_rgba(20,184,166,0.25)]">
                         <i class="ph-fill ph-camera text-xl text-white"></i>
                     </div>
                     <div class="flex-1 min-w-0">
@@ -974,13 +1040,13 @@
                            class="w-full h-full object-cover block"></video>
                     <!-- Frame guia -->
                     <div class="absolute inset-3 rounded-xl pointer-events-none
-                                border-[1.5px] border-indigo-400/50
+                                border-[1.5px] border-emerald-400/50
                                 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]"></div>
                     <!-- Spinner carregamento -->
                     <div id="cameraLoadingSpinner"
                          class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center gap-3">
                         <div class="cam-spin w-9 h-9 rounded-full
-                                    border-[3px] border-white/10 border-t-indigo-400"></div>
+                                    border-[3px] border-white/10 border-t-emerald-400"></div>
                         <span class="text-[11px] font-bold uppercase tracking-widest text-white/40">
                             Conectando câmera...
                         </span>
@@ -1001,9 +1067,9 @@
                     <button id="btnTirarFoto"
                             class="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl
                                    text-sm font-extrabold text-white transition-all
-                                   bg-gradient-to-br from-indigo-700 to-indigo-500
-                                   shadow-[0_4px_16px_rgba(99,102,241,0.35)]
-                                   hover:shadow-[0_6px_20px_rgba(99,102,241,0.45)] hover:-translate-y-0.5
+                                   bg-gradient-to-br from-emerald-600 to-emerald-500
+                                   shadow-[0_4px_16px_rgba(16,185,129,0.35)]
+                                   hover:shadow-[0_6px_20px_rgba(16,185,129,0.45)] hover:-translate-y-0.5
                                    active:translate-y-0">
                         <i class="ph-fill ph-camera text-lg"></i> Capturar Foto
                     </button>
@@ -1042,7 +1108,7 @@
                                   bg-white dark:bg-slate-950
                                   text-slate-900 dark:text-slate-100
                                   placeholder-slate-400 dark:placeholder-slate-600
-                                  focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20">
+                                  focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20">
                     <div class="flex gap-2.5">
                         <button id="btnRecapturar"
                                 class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all
@@ -1137,14 +1203,14 @@
                 <!-- Inserção manual -->
                 <div class="flex gap-2">
                     <input id="produtoManualInput" type="text" placeholder="Nome do produto não listado..."
-                        class="flex-1 px-4 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all">
+                        class="flex-1 px-4 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all">
                     <button onclick="adicionarProdutoManual()" type="button"
-                        class="px-4 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1.5">
+                        class="px-4 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1.5">
                         <i class="ph-bold ph-plus"></i> Adicionar
                     </button>
                 </div>
                 <p class="text-[10px] text-slate-400 font-medium -mt-2">
-                    <i class="ph-fill ph-info text-indigo-400"></i>
+                    <i class="ph-fill ph-info text-emerald-400"></i>
                     Produtos adicionados manualmente ficam salvos para uso futuro.
                 </p>
             </div>
@@ -1171,6 +1237,7 @@
     <script src="js/services/assinatura.service.js"></script>
     <script src="js/services/produto.service.js"></script>
     <script src="js/ui/produtos-modal.js"></script>
+    <script src="js/ui/canvas-signature.js"></script>
 
     <!-- ── App principal ── -->
     <script src="app-images.js?v=6"></script>

@@ -79,7 +79,7 @@ async function fetchMedicoData(userId) {
     try {
         const { data, error } = await supabaseClient
             .from('medicos')
-            .select('id, nome, crm, especialidade, auth_user_id, tipo_clinica')
+            .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, auth_user_id, tipo_clinica')
             .eq('auth_user_id', userId)
             .single();
 
@@ -87,7 +87,7 @@ async function fetchMedicoData(userId) {
             console.warn('Não encontrou médico pelo auth_user_id, tentando pelo id:', error.message);
             const { data: data2, error: error2 } = await supabaseClient
                 .from('medicos')
-                .select('id, nome, crm, especialidade, tipo_clinica')
+                .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, tipo_clinica')
                 .eq('id', userId)
                 .single();
             
@@ -111,11 +111,10 @@ async function fetchMedicoData(userId) {
 async function getSignedUrl(bucket, path) {
     if (!supabaseClient) return null;
     try {
-        const fileName = path.includes('/') ? path.split('/').pop() : path;
         const { data, error } = await supabaseClient
             .storage
             .from(bucket)
-            .createSignedUrl(fileName, 300);
+            .createSignedUrl(path, 300);
 
         if (error) throw error;
         return data.signedUrl;
@@ -124,6 +123,7 @@ async function getSignedUrl(bucket, path) {
         return null;
     }
 }
+window.getSignedUrl = getSignedUrl;
 
 /**
  * Verifica se um arquivo EXISTE no bucket e retorna URL assinada somente se existir.
@@ -132,21 +132,23 @@ async function getSignedUrl(bucket, path) {
 async function getSignedUrlIfExists(bucket, path) {
     if (!supabaseClient) return null;
     try {
-        const fileName = path.includes('/') ? path.split('/').pop() : path;
+        const lastSlashIndex = path.lastIndexOf('/');
+        const dirPath = lastSlashIndex !== -1 ? path.substring(0, lastSlashIndex) : '';
+        const fileName = lastSlashIndex !== -1 ? path.substring(lastSlashIndex + 1) : path;
 
-        // Verifica existência via list (busca exata pelo nome)
+        // Verifica existência via list na subpasta exata
         const { data: listData, error: listError } = await supabaseClient
             .storage
             .from(bucket)
-            .list('', { search: fileName, limit: 1 });
+            .list(dirPath, { search: fileName, limit: 1 });
 
-        if (listError || !listData || listData.length === 0) return null;
+        if (listError || !listData || !listData.some(f => f.name === fileName)) return null;
 
-        // Arquivo existe — gera URL assinada
+        // Arquivo existe — gera URL assinada com o caminho completo
         const { data, error } = await supabaseClient
             .storage
             .from(bucket)
-            .createSignedUrl(fileName, 300);
+            .createSignedUrl(path, 300);
 
         if (error) throw error;
         return data.signedUrl;
@@ -156,6 +158,72 @@ async function getSignedUrlIfExists(bucket, path) {
     }
 }
 window.getSignedUrlIfExists = getSignedUrlIfExists;
+
+/**
+ * Converte qualquer caminho ou URL do Supabase Storage (seja pública, assinada ou expirada)
+ * em uma URL assinada fresca e válida.
+ */
+async function getSignedUrlForFile(urlOrPath, defaultBucket = 'prontuarios_pdf') {
+    if (!urlOrPath) return null;
+    
+    // Se for data URI (Base64), retorna diretamente
+    if (typeof urlOrPath === 'string' && urlOrPath.startsWith('data:')) {
+        return urlOrPath;
+    }
+    
+    let bucket = defaultBucket;
+    let path = urlOrPath;
+    let isSupabaseUrl = false;
+    
+    if (typeof urlOrPath === 'string' && (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://'))) {
+        try {
+            const urlObj = new URL(urlOrPath);
+            const pathParts = urlObj.pathname.split('/');
+            const objectIndex = pathParts.findIndex(part => part === 'public' || part === 'sign' || part === 'authenticated');
+            if (objectIndex !== -1 && pathParts.length > objectIndex + 2) {
+                bucket = pathParts[objectIndex + 1];
+                const cleanPath = pathParts.slice(objectIndex + 2).join('/').split('?')[0];
+                path = decodeURIComponent(cleanPath);
+                isSupabaseUrl = true;
+            } else {
+                return urlOrPath;
+            }
+        } catch (e) {
+            console.error('Erro ao converter URL de armazenamento para assinatura:', e);
+            return urlOrPath;
+        }
+    } else {
+        // Caminho relativo
+        isSupabaseUrl = true;
+    }
+    
+    if (isSupabaseUrl && window.supabaseClient) {
+        try {
+            const { data, error } = await window.supabaseClient.storage
+                .from(bucket)
+                .download(path);
+                
+            if (!error && data) {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = (err) => reject(err);
+                    reader.readAsDataURL(data);
+                });
+                return base64;
+            } else if (error) {
+                console.warn(`[getSignedUrlForFile] Falha no download direto (${bucket}/${path}):`, error.message);
+            }
+        } catch (e) {
+            console.error(`[getSignedUrlForFile] Erro ao baixar diretamente (${bucket}/${path}):`, e);
+        }
+    }
+    
+    // Fallback: assinar URL
+    return await getSignedUrl(bucket, path);
+}
+window.getSignedUrlForFile = getSignedUrlForFile;
+
 
 /**
  * Retorna os headers de autenticação com o token JWT atual do Supabase

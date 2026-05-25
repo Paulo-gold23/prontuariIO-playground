@@ -28,6 +28,8 @@ var pacienteAtual     = null;
 var medicoAtivo       = JSON.parse(localStorage.getItem('medico_ativo')) || {};
 var consultaIdGlobal  = null;
 var audioBlobFinal    = null;
+var assinaturaMedico  = null;
+var assinaturaPaciente = null;
 
 // ── Seletores (cacheados) ───────────────────────────────────────────────────
 
@@ -42,7 +44,11 @@ var btnDescartar   = document.getElementById('btnDescartar');
 // ── Helpers de médico ───────────────────────────────────────────────────────
 
 async function garantirMedicoId() {
-    if (medicoAtivo && medicoAtivo.id) return medicoAtivo.id;
+    var atual = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+    if (atual && atual.id && ('tipo_clinica' in atual) && atual.nome_completo !== undefined) {
+        medicoAtivo = atual;
+        return atual.id;
+    }
 
     if (!window.supabaseClient || !window.fetchMedicoData) {
         throw new Error('Sessão médica indisponível');
@@ -57,16 +63,143 @@ async function garantirMedicoId() {
     var medicoDb = await window.fetchMedicoData(session.user.id);
     if (!medicoDb || !medicoDb.id) throw new Error('medico_id não encontrado');
 
-    medicoAtivo = Object.assign({}, medicoAtivo, {
-        id:          medicoDb.id,
-        auth_id:     session.user.id,
-        nome:        medicoAtivo.nome || medicoDb.nome || 'Dr(a). Médico',
-        crm:         medicoAtivo.crm  || medicoDb.crm  || '',
-        tipo_clinica: medicoAtivo.tipo_clinica || medicoDb.tipo_clinica || null,
+    medicoAtivo = Object.assign({}, atual, {
+        id:             medicoDb.id,
+        auth_id:        session.user.id,
+        nome:           medicoDb.nome || 'Dr(a). Médico',
+        nome_completo:  medicoDb.nome_completo || '',
+        crm:            medicoDb.crm || '',
+        uf_crm:         medicoDb.uf_crm || '',
+        especialidade:  medicoDb.especialidade || '',
+        assinatura_url: medicoDb.assinatura_url || null,
+        tipo_clinica:   medicoDb.tipo_clinica || null
     });
     localStorage.setItem('medico_ativo', JSON.stringify(medicoAtivo));
     return medicoAtivo.id;
 }
+
+function verificarPerfilCompleto(medico) {
+    if (!medico) return false;
+    if (!medico.nome_completo || !medico.nome || !medico.assinatura_url) return false;
+    if (!medico.especialidade) return false;
+    if (medico.tipo_clinica !== 'cicatrize') {
+        if (!medico.crm || !medico.uf_crm) return false;
+    }
+    return true;
+}
+
+async function urlToBase64(url) {
+    if (!url) return null;
+    if (typeof url === 'string' && url.startsWith('data:')) {
+        return url;
+    }
+    try {
+        var res = await fetch(url);
+        if (!res.ok) throw new Error('Status ' + res.status);
+        var blob = await res.blob();
+        return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onloadend = function () { resolve(reader.result); };
+            reader.onerror = function (e) { reject(e); };
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.error('[urlToBase64] Falha ao converter URL via fetch:', e);
+        
+        // Tenta baixar via Supabase Client se for uma URL do Supabase
+        if (window.supabaseClient && typeof url === 'string' && url.includes('supabase.co')) {
+            try {
+                console.log('[urlToBase64] Tentando download direto via Supabase client como fallback...');
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/');
+                const objectIndex = pathParts.findIndex(part => part === 'public' || part === 'sign' || part === 'authenticated');
+                if (objectIndex !== -1 && pathParts.length > objectIndex + 2) {
+                    const bucket = pathParts[objectIndex + 1];
+                    const cleanPath = pathParts.slice(objectIndex + 2).join('/').split('?')[0];
+                    const path = decodeURIComponent(cleanPath);
+                    
+                    const { data, error } = await window.supabaseClient.storage.from(bucket).download(path);
+                    if (!error && data) {
+                        return await new Promise(function (resolve, reject) {
+                            var reader = new FileReader();
+                            reader.onloadend = function () { resolve(reader.result); };
+                            reader.onerror = function (err) { reject(err); };
+                            reader.readAsDataURL(data);
+                        });
+                    }
+                }
+            } catch (err2) {
+                console.error('[urlToBase64] Falha no fallback do Supabase client:', err2);
+            }
+        }
+        
+        return url; // fallback final
+    }
+}
+
+function sincronizarEstadoCarimbo() {
+    var chk = document.getElementById('chkUsarCarimbo');
+    var overlay = document.getElementById('overlayAssinaturaSalva');
+    var img = document.getElementById('imgAssinaturaSalva');
+    var txt = document.getElementById('txtCarimboSalvo');
+    var btnLimpar = document.getElementById('btnLimparAssinaturaMedico');
+
+    if (!chk) return;
+
+    var temAssinaturaSalva = medicoAtivo && medicoAtivo.assinatura_url;
+
+    if (temAssinaturaSalva) {
+        if (chk.disabled) {
+            chk.checked = true;
+        }
+        chk.disabled = false;
+        if (chk.checked) {
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+            if (img) {
+                if (window.getSignedUrlForFile) {
+                    window.getSignedUrlForFile(medicoAtivo.assinatura_url).then(function (url) {
+                        if (url) img.src = url;
+                    });
+                } else {
+                    img.src = medicoAtivo.assinatura_url;
+                }
+            }
+            if (txt) {
+                var nome = medicoAtivo.nome_completo || medicoAtivo.nome || "";
+                var esp = medicoAtivo.especialidade || "";
+                if (medicoAtivo.tipo_clinica === 'cicatrize') {
+                    txt.innerHTML = nome + "<br>" + esp;
+                } else {
+                    var crmVal = medicoAtivo.crm || "";
+                    var ufVal = medicoAtivo.uf_crm || "";
+                    txt.innerHTML = "Dr(a). " + nome + "<br>" + esp + "<br>CRM " + crmVal + "/" + ufVal;
+                }
+            }
+            if (btnLimpar) {
+                btnLimpar.classList.add('invisible');
+            }
+        } else {
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+            if (btnLimpar) {
+                btnLimpar.classList.remove('invisible');
+            }
+        }
+    } else {
+        chk.checked = false;
+        chk.disabled = true;
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+        if (btnLimpar) {
+            btnLimpar.classList.remove('invisible');
+        }
+    }
+}
+
 
 function ativarModoCicatrize() {
     if (medicoAtivo && medicoAtivo.tipo_clinica === 'cicatrize') {
@@ -85,6 +218,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Preenche cabeçalho do médico
     garantirMedicoId().then(function () {
+        if (!verificarPerfilCompleto(medicoAtivo)) {
+            window.location.href = 'medico-dashboard.html?openProfile=true';
+            return;
+        }
+
         var mNameEl  = document.getElementById('medicoNome');
         var mAvatar  = document.getElementById('medicoAvatar');
         if (mNameEl && medicoAtivo && medicoAtivo.nome) {
@@ -118,6 +256,79 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnGravar) btnGravar.disabled = false;
         window.Recording.setStatus('ready');
     }
+
+    // Inicialização do Canvas de Assinatura
+    if (window.CanvasSignature) {
+        assinaturaMedico = new CanvasSignature(
+            'canvasAssinaturaMedico',
+            null,
+            'btnLimparAssinaturaMedico',
+            'metaAssinaturaMedicoTime',
+            'metaAssinaturaMedicoIP',
+            'Assine aqui (Responsável)'
+        );
+
+        assinaturaPaciente = new CanvasSignature(
+            'canvasAssinaturaPaciente',
+            null,
+            'btnLimparAssinaturaPaciente',
+            'metaAssinaturaPacienteTime',
+            'metaAssinaturaPacienteIP',
+            'Assine aqui (Paciente)'
+        );
+    }
+
+    // Configura e sincroniza o carimbo/assinatura do perfil
+    var chk = document.getElementById('chkUsarCarimbo');
+    if (chk) {
+        // Se o médico tem assinatura cadastrada, marca por padrão
+        if (medicoAtivo && medicoAtivo.assinatura_url) {
+            chk.checked = true;
+        } else {
+            chk.checked = false;
+            chk.disabled = true;
+        }
+
+        sincronizarEstadoCarimbo();
+
+        chk.addEventListener('change', function () {
+            if (!chk.checked) {
+                if (assinaturaMedico) {
+                    assinaturaMedico.clear();
+                }
+            }
+            sincronizarEstadoCarimbo();
+        });
+    }
+
+    // Ouvinte para sincronização de abas em tempo real
+    window.addEventListener('storage', function (e) {
+        if (e.key === 'medico_ativo' || !e.key) {
+            var medico = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+            if (medico && medico.id) {
+                medicoAtivo = medico;
+                
+                // Se o perfil ficou incompleto por alteração externa, redireciona
+                if (!verificarPerfilCompleto(medicoAtivo)) {
+                    window.location.href = 'medico-dashboard.html?openProfile=true';
+                    return;
+                }
+
+                // Recarrega avatar e nome
+                var mNameEl = document.getElementById('medicoNome');
+                var mAvatar = document.getElementById('medicoAvatar');
+                if (mNameEl && medicoAtivo.nome) {
+                    mNameEl.textContent = 'Dr(a). ' + medicoAtivo.nome;
+                }
+                if (mAvatar && medicoAtivo.nome) {
+                    mAvatar.src = 'https://ui-avatars.com/api/?name=' +
+                        encodeURIComponent(medicoAtivo.nome) + '&background=6366f1&color=fff';
+                }
+                
+                sincronizarEstadoCarimbo();
+            }
+        }
+    });
 });
 
 // ── Gravação — Eventos ──────────────────────────────────────────────────────
@@ -283,7 +494,15 @@ if (btnCancelarAssinatura) btnCancelarAssinatura.onclick = fecharModalAssinatura
 if (btnFecharModalAssin)   btnFecharModalAssin.onclick   = fecharModalAssinatura;
 
 if (btnAprovar) {
-    btnAprovar.onclick = function () { abrirModalAssinatura(); };
+    btnAprovar.onclick = function () {
+        var chk = document.getElementById('chkUsarCarimbo');
+        var usarCarimbo = chk && chk.checked;
+        if (!usarCarimbo && assinaturaMedico && assinaturaMedico.isEmpty()) {
+            window.showToast('Por favor, insira a assinatura do profissional responsável antes de aprovar.', 'warning');
+            return;
+        }
+        abrirModalAssinatura();
+    };
 }
 
 // ── Confirmação de Assinatura ───────────────────────────────────────────────
@@ -299,6 +518,42 @@ if (btnConfirmarAssinatura) {
         // Injeta produtos no payload (ProdutoService já tem o estado)
         var produtosPayload = window.ProdutoService ? window.ProdutoService.getPayload() : [];
 
+        var chk = document.getElementById('chkUsarCarimbo');
+        var usarCarimbo = chk && chk.checked;
+
+        // Captura assinaturas e metadados
+        var assinaturaMedicoBase64 = null;
+        var medicoMetadata = null;
+
+        if (usarCarimbo) {
+            if (medicoAtivo && medicoAtivo.assinatura_url) {
+                try {
+                    var signedUrl = window.getSignedUrlForFile ? await window.getSignedUrlForFile(medicoAtivo.assinatura_url) : medicoAtivo.assinatura_url;
+                    assinaturaMedicoBase64 = await urlToBase64(signedUrl);
+                } catch (e) {
+                    console.error('[Atendimento] Erro convertendo assinatura:', e);
+                    assinaturaMedicoBase64 = medicoAtivo.assinatura_url;
+                }
+            }
+            medicoMetadata = {
+                timestamp: new Date().toISOString(),
+                ip: (assinaturaMedico && assinaturaMedico.auditMetadata) ? assinaturaMedico.auditMetadata.ip : "N/I",
+                userAgent: navigator.userAgent,
+                resolution: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                usar_carimbo: true
+            };
+        } else {
+            assinaturaMedicoBase64 = assinaturaMedico ? assinaturaMedico.toPNG() : null;
+            medicoMetadata = assinaturaMedico ? assinaturaMedico.getMetadata() : null;
+        }
+
+        var assinaturaPacienteBase64 = assinaturaPaciente ? assinaturaPaciente.toPNG() : null;
+        var assinaturaMetadados = {
+            medico: medicoMetadata,
+            paciente: assinaturaPaciente ? assinaturaPaciente.getMetadata() : null
+        };
+
         var payload = {
             consulta_id: consultaIdGlobal,
             conteudo_medico: {
@@ -310,6 +565,11 @@ if (btnConfirmarAssinatura) {
                 curativo:             _coletarCurativo(),
             },
             produtos_utilizados: produtosPayload,
+            assinatura_medico_base64: assinaturaMedicoBase64,
+            assinatura_paciente_base64: assinaturaPacienteBase64,
+            assinatura_metadados: assinaturaMetadados,
+            usar_carimbo: usarCarimbo,
+            medico_dados: medicoAtivo
         };
 
         // Salva produtos no Supabase
@@ -430,16 +690,79 @@ function _bloquearFormulario() {
     }
     var btnProdEl = document.getElementById('btnAbrirProdutos');
     if (btnProdEl) btnProdEl.style.display = 'none';
+
+    // Desabilitar interações com assinaturas e esconder botões "Limpar"
+    document.querySelectorAll('.canvas-wrap').forEach(function (wrap) {
+        wrap.style.pointerEvents = 'none';
+        wrap.style.opacity = '0.7';
+    });
+    ['btnLimparAssinaturaMedico', 'btnLimparAssinaturaPaciente'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.style.display = 'none';
+    });
+
+    var chk = document.getElementById('chkUsarCarimbo');
+    if (chk) {
+        chk.disabled = true;
+        var parent = chk.parentElement;
+        if (parent) parent.style.opacity = '0.5';
+    }
+}
+
+async function _aguardarPDF(consultaId, maxTentativas, intervaloMs) {
+    maxTentativas = maxTentativas || 8;
+    intervaloMs = intervaloMs || 3000;
+    var pdfPath = consultaId + '.pdf';
+    for (var i = 0; i < maxTentativas; i++) {
+        console.log('[app] Tentativa ' + (i + 1) + '/' + maxTentativas + ' para buscar PDF...');
+        var url = await getSignedUrlIfExists('prontuarios_pdf', pdfPath);
+        if (url) {
+            console.log('[app] PDF encontrado na tentativa ' + (i + 1));
+            return url;
+        }
+        if (i < maxTentativas - 1) {
+            await new Promise(function(r) { setTimeout(r, intervaloMs); });
+        }
+    }
+    console.warn('[app] PDF não encontrado após ' + maxTentativas + ' tentativas');
+    return null;
 }
 
 async function _concluirAtendimento(payload) {
     document.getElementById('conclusaoAtendimento').classList.remove('hidden');
 
-    var pdfUrl = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
     var btnPDF = document.getElementById('btnDownloadPDF');
+    if (btnPDF) {
+        btnPDF.innerHTML = '<i class="ph ph-spinner animate-spin text-2xl"></i> Gerando PDF...';
+        btnPDF.removeAttribute('href');
+        btnPDF.onclick = function(e) { e.preventDefault(); };
+    }
+
+    // Polling: aguarda o n8n gerar o PDF (até ~24s)
+    var pdfUrl = await _aguardarPDF(payload.consulta_id, 8, 3000);
     if (btnPDF && pdfUrl) {
         btnPDF.href   = pdfUrl;
         btnPDF.target = '_blank';
+        btnPDF.onclick = null;
+        btnPDF.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> BAIXAR PDF';
+        window.showToast('PDF do prontuário gerado com sucesso!', 'success');
+    } else if (btnPDF) {
+        btnPDF.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> PDF (processando...)';
+        btnPDF.onclick = async function(e) {
+            e.preventDefault();
+            btnPDF.innerHTML = '<i class="ph ph-spinner animate-spin text-2xl"></i> Buscando...';
+            var retryUrl = await _aguardarPDF(payload.consulta_id, 5, 3000);
+            if (retryUrl) {
+                btnPDF.href = retryUrl;
+                btnPDF.target = '_blank';
+                btnPDF.onclick = null;
+                btnPDF.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> BAIXAR PDF';
+                window.open(retryUrl, '_blank');
+            } else {
+                window.showToast('PDF ainda não disponível. Tente novamente em alguns segundos.', 'warning');
+                btnPDF.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> PDF (processando...)';
+            }
+        };
     }
 
     var badge = document.getElementById('pacienteStatus');
@@ -501,8 +824,16 @@ async function _forcarUiSucesso(payload) {
     document.getElementById('conclusaoAtendimento').classList.remove('hidden');
     var btnDL = document.getElementById('btnDownloadPDF');
     if (btnDL) {
-        var url = await getSignedUrl('prontuarios_pdf', payload.consulta_id + '.pdf');
-        if (url) { btnDL.href = url; btnDL.target = '_blank'; }
+        btnDL.innerHTML = '<i class="ph ph-spinner animate-spin text-2xl"></i> Gerando PDF...';
+        var url = await _aguardarPDF(payload.consulta_id, 8, 3000);
+        if (url) {
+            btnDL.href = url;
+            btnDL.target = '_blank';
+            btnDL.onclick = null;
+            btnDL.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> BAIXAR PDF';
+        } else {
+            btnDL.innerHTML = '<i class="ph-fill ph-file-pdf text-2xl"></i> PDF (processando...)';
+        }
     }
     await _chamarExibirBotaoRelatorioImagens(payload.consulta_id);
 }
