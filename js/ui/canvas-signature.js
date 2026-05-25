@@ -36,6 +36,11 @@ class CanvasSignature {
     }
 
     init() {
+        // Bloqueia scroll/zoom do browser DIRETAMENTE no canvas (crítico para mobile)
+        this.canvas.style.touchAction = 'none';
+        this.canvas.style.userSelect  = 'none';
+        this.canvas.style.webkitUserSelect = 'none';
+
         // Ajustar o tamanho inicial com base no dispositivo físico (Retina displays)
         this.resizeCanvas();
         
@@ -47,24 +52,24 @@ class CanvasSignature {
         });
 
         if (window.PointerEvent) {
-            // Registrar Eventos de Ponteiro (Stylus, touch e mouse unificados em navegadores modernos)
-            this.canvas.addEventListener('pointerdown', (e) => this.startDrawing(e));
-            this.canvas.addEventListener('pointermove', (e) => this.draw(e));
-            this.canvas.addEventListener('pointerup', (e) => this.stopDrawing(e));
+            // PointerEvent unifica mouse, stylus e touch em navegadores modernos.
+            // { passive: false } + preventDefault() bloqueiam scroll/zoom do browser.
+            this.canvas.addEventListener('pointerdown',   (e) => this.startDrawing(e), { passive: false });
+            this.canvas.addEventListener('pointermove',   (e) => this.draw(e),          { passive: false });
+            this.canvas.addEventListener('pointerup',     (e) => this.stopDrawing(e));
             this.canvas.addEventListener('pointercancel', (e) => this.stopDrawing(e));
-            this.canvas.addEventListener('pointerout', (e) => this.stopDrawing(e));
         } else {
-            // Registrar Eventos de Toque como fallback (dispositivos móveis antigos)
-            this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e), { passive: false });
-            this.canvas.addEventListener('touchmove', (e) => this.draw(e), { passive: false });
-            this.canvas.addEventListener('touchend', (e) => this.stopDrawing(e));
-            this.canvas.addEventListener('touchcancel', (e) => this.stopDrawing(e));
+            // Fallback: TouchEvent para dispositivos que não suportam PointerEvent
+            this.canvas.addEventListener('touchstart',  (e) => this.startDrawing(e), { passive: false });
+            this.canvas.addEventListener('touchmove',   (e) => this.draw(e),          { passive: false });
+            this.canvas.addEventListener('touchend',    (e) => this.stopDrawing(e),  { passive: false });
+            this.canvas.addEventListener('touchcancel', (e) => this.stopDrawing(e),  { passive: false });
 
-            // Registrar Eventos de Mouse como fallback (desktops antigos)
+            // Fallback mouse para desktops
             this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
             this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-            this.canvas.addEventListener('mouseup', (e) => this.stopDrawing(e));
-            this.canvas.addEventListener('mouseout', (e) => this.stopDrawing(e));
+            this.canvas.addEventListener('mouseup',   (e) => this.stopDrawing(e));
+            this.canvas.addEventListener('mouseout',  (e) => this.stopDrawing(e));
         }
 
         // Botão Limpar
@@ -116,9 +121,29 @@ class CanvasSignature {
 
     getCoordinates(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Trata eventos de touch e mouse de forma unificada
-        const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
-        const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+
+        // Ordem de prioridade:
+        // 1. PointerEvent  → e.clientX / e.clientY  (mouse, stylus, touch via PointerEvent)
+        // 2. TouchEvent    → e.touches[0]            (fallback para dispositivos antigos)
+        // 3. MouseEvent    → e.clientX / e.clientY   (desktop)
+        let clientX, clientY;
+        if (window.PointerEvent && e instanceof PointerEvent) {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        } else if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            // touchend envia changedTouches, não touches
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        // Converte coordenadas de tela para coordenadas lógicas do canvas
+        // (sem aplicar devicePixelRatio — o canvas já foi escalado no ctx.scale)
         return {
             x: clientX - rect.left,
             y: clientY - rect.top
@@ -127,6 +152,14 @@ class CanvasSignature {
 
     startDrawing(e) {
         e.preventDefault();
+        e.stopPropagation();
+
+        // setPointerCapture garante que todos os eventos posteriores
+        // (pointermove, pointerup) cheguem a este elemento mesmo que o dedo
+        // saia dos limites — essencial para não perder o traço em mobile.
+        if (window.PointerEvent && e instanceof PointerEvent && e.pointerId != null) {
+            try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        }
         
         // Ajusta as dimensões físicas do canvas para corresponder ao layout visível na tela
         // antes de capturar qualquer coordenada no primeiro toque.
@@ -158,6 +191,7 @@ class CanvasSignature {
     draw(e) {
         if (!this.isDrawing) return;
         e.preventDefault();
+        e.stopPropagation();
 
         const coords = this.getCoordinates(e);
         this.currentStroke.push(coords);
@@ -175,13 +209,22 @@ class CanvasSignature {
             this.ctx.beginPath();
             
             if (stroke.length === 1) {
-                // Desenha ponto isolado
+                // Ponto isolado (tap sem arrastar)
                 this.ctx.arc(stroke[0].x, stroke[0].y, this.ctx.lineWidth / 2, 0, Math.PI * 2);
                 this.ctx.fillStyle = this.ctx.strokeStyle;
                 this.ctx.fill();
                 continue;
             }
-            
+
+            if (stroke.length === 2) {
+                // Linha reta simples entre 2 pontos
+                this.ctx.moveTo(stroke[0].x, stroke[0].y);
+                this.ctx.lineTo(stroke[1].x, stroke[1].y);
+                this.ctx.stroke();
+                continue;
+            }
+
+            // 3+ pontos: suavização Bezier quadrática
             this.ctx.moveTo(stroke[0].x, stroke[0].y);
             
             let i;
@@ -190,18 +233,13 @@ class CanvasSignature {
                 const yc = (stroke[i].y + stroke[i + 1].y) / 2;
                 this.ctx.quadraticCurveTo(stroke[i].x, stroke[i].y, xc, yc);
             }
-            
-            if (stroke.length > 2) {
-                this.ctx.quadraticCurveTo(
-                    stroke[i].x,
-                    stroke[i].y,
-                    stroke[i + 1].x,
-                    stroke[i + 1].y
-                );
-            } else {
-                this.ctx.lineTo(stroke[1].x, stroke[1].y);
-            }
-            
+            // Último segmento até o ponto final
+            this.ctx.quadraticCurveTo(
+                stroke[i].x,
+                stroke[i].y,
+                stroke[i + 1].x,
+                stroke[i + 1].y
+            );
             this.ctx.stroke();
         }
     }
@@ -210,6 +248,11 @@ class CanvasSignature {
         if (!this.isDrawing) return;
         this.isDrawing = false;
         this.wrapper.classList.remove('active');
+
+        // Libera o pointer capture para encerrar o contexto de captura limpo
+        if (e && window.PointerEvent && e instanceof PointerEvent && e.pointerId != null) {
+            try { this.canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
     }
 
     clear() {

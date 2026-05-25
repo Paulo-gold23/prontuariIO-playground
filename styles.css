@@ -16,6 +16,8 @@
     border-radius: 1rem;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
     transition: border-color 0.2s, background-color 0.2s;
 }
 

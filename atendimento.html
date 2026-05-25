@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Atendimento Médico - prontuar.IO</title>
     <meta name="description" content="Página de atendimento médico do prontuar.IO. Realize consultas, grave áudios e assine prontuários." />
     <meta property="og:title" content="Atendimento Médico - prontuar.IO" />
@@ -760,7 +760,7 @@
                                 </div>
 
                                 <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
-                                    <canvas id="canvasAssinaturaMedico"></canvas>
+                                    <canvas id="canvasAssinaturaMedico" style="touch-action:none;user-select:none;-webkit-user-select:none;"></canvas>
                                     <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
                                         Assine aqui (Responsável)
                                     </div>
@@ -789,7 +789,7 @@
                                     </button>
                                 </div>
                                 <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
-                                    <canvas id="canvasAssinaturaPaciente"></canvas>
+                                    <canvas id="canvasAssinaturaPaciente" style="touch-action:none;user-select:none;-webkit-user-select:none;"></canvas>
                                     <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
                                         Assine aqui (Paciente)
                                     </div>
