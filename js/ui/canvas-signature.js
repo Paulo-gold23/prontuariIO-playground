@@ -1,6 +1,6 @@
 /**
- * Prontuar.io - Assinatura Digital Stylus / Mouse
- * Gerenciador de Canvas com suporte a múltiplos traços, suavização Bezier e captura de metadados
+ * Prontuar.io — Assinatura Digital
+ * Canvas com suavização Bezier, metadados jurídicos e modal fullscreen para mobile.
  */
 
 class CanvasSignature {
@@ -10,11 +10,8 @@ class CanvasSignature {
         this.clearButton = document.getElementById(clearButtonId);
         this.metadataTime = document.getElementById(metadataTimeId);
         this.metadataIP = document.getElementById(metadataIPId);
-        
-        if (!this.canvas) {
-            console.error(`Canvas com ID ${canvasId} não encontrado.`);
-            return;
-        }
+
+        if (!this.canvas) { console.error(`Canvas ${canvasId} não encontrado.`); return; }
 
         this.ctx = this.canvas.getContext('2d');
         this.strokes = [];
@@ -23,9 +20,9 @@ class CanvasSignature {
         this.hasDrawn = false;
         this.placeholderText = placeholderText;
         this._lastPoint = null;
-        this._canvasReady = false;
+        this._signatureDataUrl = null;
+        this._modalOpen = false;
 
-        // Metadados Jurídicos
         this.auditMetadata = {
             ip: "Carregando...",
             userAgent: navigator.userAgent,
@@ -37,355 +34,411 @@ class CanvasSignature {
         this.init();
     }
 
+    /* ═══════════════════════════════════════════
+       Detecção mobile
+       ═══════════════════════════════════════════ */
+
+    get _isMobile() {
+        return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
+    }
+
+    /* ═══════════════════════════════════════════
+       Inicialização
+       ═══════════════════════════════════════════ */
+
     init() {
-        // Bloqueia scroll/zoom/tap-highlight do browser no canvas (crítico para mobile)
         const s = this.canvas.style;
         s.touchAction = 'none';
-        s.userSelect = 'none';
-        s.webkitUserSelect = 'none';
+        s.userSelect = s.webkitUserSelect = 'none';
         s.webkitTapHighlightColor = 'transparent';
-        s.msTouchAction = 'none';
 
-        // Ajustar tamanho inicial
         this.resizeCanvas();
-        
-        // Redimensionamento com debounce
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => this.resizeCanvas(), 150);
-        });
 
-        // Orientação mobile
-        if ('onorientationchange' in window) {
-            window.addEventListener('orientationchange', () => {
-                setTimeout(() => this.resizeCanvas(), 300);
-            });
+        let rt;
+        window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => this.resizeCanvas(), 150); });
+
+        if (this._isMobile) {
+            // Mobile → toque abre modal fullscreen
+            const open = (e) => { e.preventDefault(); e.stopPropagation(); if (!this._modalOpen) this._openFullscreenModal(); };
+            this.canvas.addEventListener('pointerdown', open, { passive: false });
+            this.canvas.addEventListener('touchstart', open, { passive: false });
+        } else {
+            this._setupInlineDrawing();
         }
 
+        if (this.clearButton) this.clearButton.addEventListener('click', () => this.clear());
+        this.fetchClientIP();
+    }
+
+    /* ═══════════════════════════════════════════
+       Desenho inline (desktop / stylus)
+       ═══════════════════════════════════════════ */
+
+    _setupInlineDrawing() {
         if (window.PointerEvent) {
-            // PointerEvent: unifica mouse, stylus, touch
-            // passive:false é OBRIGATÓRIO para que preventDefault() funcione no Chrome mobile
             this.canvas.addEventListener('pointerdown',   (e) => this.startDrawing(e), { passive: false });
             this.canvas.addEventListener('pointermove',   (e) => this.draw(e),          { passive: false });
             this.canvas.addEventListener('pointerup',     (e) => this.stopDrawing(e));
             this.canvas.addEventListener('pointercancel', (e) => this.stopDrawing(e));
-            // NÃO registrar pointerout — mata o traço quando o dedo sai da borda
         } else {
-            // Fallback: TouchEvent para dispositivos antigos
-            this.canvas.addEventListener('touchstart',  (e) => this.startDrawing(e), { passive: false });
-            this.canvas.addEventListener('touchmove',   (e) => this.draw(e),          { passive: false });
-            this.canvas.addEventListener('touchend',    (e) => this.stopDrawing(e),  { passive: false });
-            this.canvas.addEventListener('touchcancel', (e) => this.stopDrawing(e),  { passive: false });
-
-            // Fallback mouse desktop
             this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
             this.canvas.addEventListener('mousemove', (e) => this.draw(e));
             this.canvas.addEventListener('mouseup',   (e) => this.stopDrawing(e));
             this.canvas.addEventListener('mouseout',  (e) => this.stopDrawing(e));
         }
-
-        // Botão Limpar
-        if (this.clearButton) {
-            this.clearButton.addEventListener('click', () => this.clear());
-        }
-
-        // IP
-        this.fetchClientIP();
     }
 
-    // ──────────────────────────────────────────────
-    //  Estilos do contexto — lineWidth responsivo
-    // ──────────────────────────────────────────────
-
     _getLineWidth() {
-        const rect = this.canvas.getBoundingClientRect();
-        const shorter = Math.min(rect.width, rect.height);
-        // Em telas pequenas (canvas < 120px de altura) traço fino
-        // Em telas grandes (canvas > 200px) traço mais visível
-        if (shorter < 100) return 1.2;
-        if (shorter < 160) return 1.6;
-        return 2.2;
+        const h = this.canvas.getBoundingClientRect().height;
+        if (h < 100) return 1.2;
+        if (h < 160) return 1.6;
+        return 2.0;
     }
 
     setupContextStyles() {
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         this.ctx.lineWidth = this._getLineWidth();
-        this.ctx.strokeStyle = '#000000';
+        this.ctx.strokeStyle = '#1a1a2e';
     }
-
-    // ──────────────────────────────────────────────
-    //  Resize — preserva strokes via dados, não pixels
-    // ──────────────────────────────────────────────
 
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
-        const width = rect.width || 300;
-        const height = rect.height || 150;
-        
-        const ratio = window.devicePixelRatio || 1;
-        this.canvas.width = width * ratio;
-        this.canvas.height = height * ratio;
-        this.ctx.scale(ratio, ratio);
-        
+        const w = rect.width || 300, h = rect.height || 150;
+        const r = window.devicePixelRatio || 1;
+        this.canvas.width = w * r;
+        this.canvas.height = h * r;
+        this.ctx.scale(r, r);
         this.setupContextStyles();
-        this._canvasReady = true;
 
-        // Redesenha a partir dos dados vetoriais (não perde qualidade)
-        if (this.hasDrawn && this.strokes.length > 0) {
-            this._redrawAllSmooth();
-        }
+        if (this._signatureDataUrl) this._renderPreview();
+        else if (this.hasDrawn && this.strokes.length) this._redrawAllSmooth();
     }
-
-    // ──────────────────────────────────────────────
-    //  Coordenadas — trata PointerEvent vs Touch vs Mouse
-    // ──────────────────────────────────────────────
 
     getCoordinates(e) {
         const rect = this.canvas.getBoundingClientRect();
         let cx, cy;
-
-        if (e instanceof PointerEvent) {
-            cx = e.clientX;
-            cy = e.clientY;
-        } else if (e.touches && e.touches.length > 0) {
-            cx = e.touches[0].clientX;
-            cy = e.touches[0].clientY;
-        } else if (e.changedTouches && e.changedTouches.length > 0) {
-            cx = e.changedTouches[0].clientX;
-            cy = e.changedTouches[0].clientY;
-        } else {
-            cx = e.clientX;
-            cy = e.clientY;
-        }
-
-        return {
-            x: cx - rect.left,
-            y: cy - rect.top
-        };
+        if (e instanceof PointerEvent) { cx = e.clientX; cy = e.clientY; }
+        else if (e.touches?.length) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+        else { cx = e.clientX; cy = e.clientY; }
+        return { x: cx - rect.left, y: cy - rect.top };
     }
 
-    // ──────────────────────────────────────────────
-    //  startDrawing
-    // ──────────────────────────────────────────────
-
     startDrawing(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // setPointerCapture: prende TODOS os eventos futuros neste elemento
-        // mesmo que o dedo saia dos limites do canvas. Sem isso o browser
-        // redireciona os pointermove para o documento e o traço morre.
-        if (e.pointerId != null && this.canvas.setPointerCapture) {
+        e.preventDefault(); e.stopPropagation();
+        if (e.pointerId != null && this.canvas.setPointerCapture)
             try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {}
-        }
 
-        // Garante dimensões corretas no primeiro toque
-        if (!this._canvasReady || !this.hasDrawn) {
-            this.resizeCanvas();
-        }
-
+        if (!this.hasDrawn) this.resizeCanvas();
         this.setupContextStyles();
         this.isDrawing = true;
         this.wrapper?.classList.add('active');
-        
-        const coords = this.getCoordinates(e);
-        this.currentStroke = [coords];
-        this.strokes.push(this.currentStroke);
-        this._lastPoint = coords;
-        
-        // Placeholder
-        if (!this.hasDrawn) {
-            this.hasDrawn = true;
-            this.wrapper?.classList.add('has-signature');
-            this.updateTimestamp();
-        }
 
-        // Ponto inicial visível (para taps sem arrastar)
+        const c = this.getCoordinates(e);
+        this.currentStroke = [c];
+        this.strokes.push(this.currentStroke);
+        this._lastPoint = c;
+
+        if (!this.hasDrawn) { this.hasDrawn = true; this.wrapper?.classList.add('has-signature'); this.updateTimestamp(); }
         this.ctx.beginPath();
-        this.ctx.arc(coords.x, coords.y, this.ctx.lineWidth / 2, 0, Math.PI * 2);
+        this.ctx.arc(c.x, c.y, this.ctx.lineWidth / 2, 0, Math.PI * 2);
         this.ctx.fillStyle = this.ctx.strokeStyle;
         this.ctx.fill();
     }
 
-    // ──────────────────────────────────────────────
-    //  draw — INCREMENTAL (não limpa o canvas a cada frame)
-    //  Desenha apenas o novo segmento. Muito mais rápido em mobile.
-    // ──────────────────────────────────────────────
-
     draw(e) {
         if (!this.isDrawing) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const coords = this.getCoordinates(e);
-        this.currentStroke.push(coords);
-
-        const prev = this._lastPoint;
-        if (!prev) return;
-
-        // Desenha segmento incremental com suavização via ponto médio
+        e.preventDefault(); e.stopPropagation();
+        const c = this.getCoordinates(e);
+        this.currentStroke.push(c);
         const n = this.currentStroke.length;
         this.ctx.beginPath();
-
         if (n >= 3) {
-            // Suavização quadrática: usa o ponto anterior como controle
-            const p0 = this.currentStroke[n - 3];
-            const p1 = this.currentStroke[n - 2];
-            const mid0x = (p0.x + p1.x) / 2;
-            const mid0y = (p0.y + p1.y) / 2;
-            const mid1x = (p1.x + coords.x) / 2;
-            const mid1y = (p1.y + coords.y) / 2;
-
-            this.ctx.moveTo(mid0x, mid0y);
-            this.ctx.quadraticCurveTo(p1.x, p1.y, mid1x, mid1y);
+            const p0 = this.currentStroke[n - 3], p1 = this.currentStroke[n - 2];
+            this.ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            this.ctx.quadraticCurveTo(p1.x, p1.y, (p1.x + c.x) / 2, (p1.y + c.y) / 2);
         } else {
-            // Primeiro segmento: linha reta
-            this.ctx.moveTo(prev.x, prev.y);
-            this.ctx.lineTo(coords.x, coords.y);
+            this.ctx.moveTo(this._lastPoint.x, this._lastPoint.y);
+            this.ctx.lineTo(c.x, c.y);
         }
-
         this.ctx.stroke();
-        this._lastPoint = coords;
+        this._lastPoint = c;
     }
-
-    // ──────────────────────────────────────────────
-    //  stopDrawing — finaliza e faz redraw suavizado completo
-    // ──────────────────────────────────────────────
 
     stopDrawing(e) {
         if (!this.isDrawing) return;
         this.isDrawing = false;
         this._lastPoint = null;
         this.wrapper?.classList.remove('active');
-
-        // Libera pointer capture
-        if (e && e.pointerId != null && this.canvas.releasePointerCapture) {
+        if (e?.pointerId != null && this.canvas.releasePointerCapture)
             try { this.canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-        }
-
-        // Redraw final com suavização Bezier completa em todos os traços
         this._redrawAllSmooth();
     }
 
-    // ──────────────────────────────────────────────
-    //  Redraw completo com suavização Bezier
-    // ──────────────────────────────────────────────
-
     _redrawAllSmooth() {
-        const ratio = window.devicePixelRatio || 1;
-        const w = this.canvas.width / ratio;
-        const h = this.canvas.height / ratio;
+        const r = window.devicePixelRatio || 1;
+        const w = this.canvas.width / r, h = this.canvas.height / r;
         this.ctx.clearRect(0, 0, w, h);
         this.setupContextStyles();
-
-        for (const stroke of this.strokes) {
-            if (stroke.length === 0) continue;
-
+        for (const s of this.strokes) {
+            if (!s.length) continue;
             this.ctx.beginPath();
-
-            if (stroke.length === 1) {
-                this.ctx.arc(stroke[0].x, stroke[0].y, this.ctx.lineWidth / 2, 0, Math.PI * 2);
-                this.ctx.fillStyle = this.ctx.strokeStyle;
-                this.ctx.fill();
-                continue;
-            }
-
-            if (stroke.length === 2) {
-                this.ctx.moveTo(stroke[0].x, stroke[0].y);
-                this.ctx.lineTo(stroke[1].x, stroke[1].y);
-                this.ctx.stroke();
-                continue;
-            }
-
-            // 3+ pontos: suavização com curvas quadráticas
-            this.ctx.moveTo(stroke[0].x, stroke[0].y);
-
-            for (let i = 1; i < stroke.length - 1; i++) {
-                const xc = (stroke[i].x + stroke[i + 1].x) / 2;
-                const yc = (stroke[i].y + stroke[i + 1].y) / 2;
-                this.ctx.quadraticCurveTo(stroke[i].x, stroke[i].y, xc, yc);
-            }
-
-            // Último ponto
-            const last = stroke[stroke.length - 1];
-            this.ctx.lineTo(last.x, last.y);
+            if (s.length === 1) { this.ctx.arc(s[0].x, s[0].y, this.ctx.lineWidth / 2, 0, Math.PI * 2); this.ctx.fillStyle = this.ctx.strokeStyle; this.ctx.fill(); continue; }
+            if (s.length === 2) { this.ctx.moveTo(s[0].x, s[0].y); this.ctx.lineTo(s[1].x, s[1].y); this.ctx.stroke(); continue; }
+            this.ctx.moveTo(s[0].x, s[0].y);
+            for (let i = 1; i < s.length - 1; i++) { this.ctx.quadraticCurveTo(s[i].x, s[i].y, (s[i].x + s[i+1].x) / 2, (s[i].y + s[i+1].y) / 2); }
+            this.ctx.lineTo(s[s.length - 1].x, s[s.length - 1].y);
             this.ctx.stroke();
         }
     }
 
-    // ──────────────────────────────────────────────
-    //  Utilitários
-    // ──────────────────────────────────────────────
+    /* ═══════════════════════════════════════════
+       MODAL FULLSCREEN (mobile)
+       ═══════════════════════════════════════════ */
+
+    _openFullscreenModal() {
+        this._modalOpen = true;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        let modalStrokes = [];
+        let curStroke = [];
+        let drawing = false;
+        let last = null;
+
+        // ── DOM ──
+        const overlay = document.createElement('div');
+        overlay.id = 'sig-modal';
+        overlay.innerHTML = `
+        <style>
+            #sig-modal { position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;
+                background:rgba(15,23,42,0.96);animation:smIn .25s ease-out; }
+            @keyframes smIn { from{opacity:0} to{opacity:1} }
+            #sig-modal [data-wrap] { flex:1;margin:0 14px;min-height:0;display:flex;
+                animation:smUp .3s ease-out .08s both; }
+            @keyframes smUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+            #sig-modal canvas { position:absolute;top:0;left:0;width:100%;height:100%;
+                touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair; }
+            #sig-modal .sm-btn { border:none;cursor:pointer;-webkit-tap-highlight-color:transparent; }
+        </style>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-shrink:0;">
+            <button class="sm-btn" data-action="cancel" style="width:44px;height:44px;display:flex;align-items:center;
+                justify-content:center;background:rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:22px;">✕</button>
+            <span style="color:rgba(255,255,255,0.88);font-size:14px;font-weight:600;letter-spacing:.4px;">Assinatura Digital</span>
+            <button class="sm-btn" data-action="clear" style="padding:8px 18px;background:rgba(255,255,255,0.08);
+                border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:rgba(255,255,255,0.85);font-size:13px;font-weight:500;">Limpar</button>
+        </div>
+        <div data-wrap>
+            <div style="flex:1;background:#fff;border-radius:20px;position:relative;overflow:hidden;
+                box-shadow:0 20px 50px rgba(0,0,0,0.35);">
+                <canvas data-c></canvas>
+                <div style="position:absolute;bottom:26%;left:8%;right:8%;border-bottom:1.5px dashed rgba(0,0,0,0.07);pointer-events:none;"></div>
+                <div style="position:absolute;bottom:20%;right:8%;color:rgba(0,0,0,0.1);font-size:10px;font-weight:500;
+                    pointer-events:none;font-family:Inter,system-ui,sans-serif;">assine acima da linha</div>
+            </div>
+        </div>
+        <div style="padding:14px 18px 28px;flex-shrink:0;">
+            <button class="sm-btn" data-action="confirm" style="width:100%;padding:18px;
+                background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;color:#fff;
+                font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(16,185,129,0.4);letter-spacing:.3px;">
+                Confirmar Assinatura</button>
+        </div>`;
+        document.body.appendChild(overlay);
+
+        const mc = overlay.querySelector('[data-c]');
+        const mCtx = mc.getContext('2d');
+
+        // ── Sizing ──
+        const sizeModal = () => {
+            const p = mc.parentElement.getBoundingClientRect();
+            const ratio = window.devicePixelRatio || 1;
+            mc.width = p.width * ratio;
+            mc.height = p.height * ratio;
+            mCtx.scale(ratio, ratio);
+            redraw();
+        };
+
+        const LW = 1.5;
+        const setStyles = () => { mCtx.lineCap = 'round'; mCtx.lineJoin = 'round'; mCtx.lineWidth = LW; mCtx.strokeStyle = '#1a1a2e'; };
+
+        const getC = (e) => {
+            const r = mc.getBoundingClientRect();
+            let cx, cy;
+            if (e instanceof PointerEvent) { cx = e.clientX; cy = e.clientY; }
+            else if (e.touches?.length) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+            else { cx = e.clientX; cy = e.clientY; }
+            return { x: cx - r.left, y: cy - r.top };
+        };
+
+        // ── Redraw Bezier ──
+        const redraw = () => {
+            const ratio = window.devicePixelRatio || 1;
+            const w = mc.width / ratio, h = mc.height / ratio;
+            mCtx.clearRect(0, 0, w, h);
+
+            // Guide line
+            mCtx.save();
+            mCtx.setLineDash([4, 4]);
+            mCtx.strokeStyle = 'rgba(0,0,0,0.06)';
+            mCtx.lineWidth = 0.5;
+            mCtx.beginPath();
+            mCtx.moveTo(w * 0.08, h * 0.74);
+            mCtx.lineTo(w * 0.92, h * 0.74);
+            mCtx.stroke();
+            mCtx.restore();
+
+            setStyles();
+            for (const s of modalStrokes) {
+                if (!s.length) continue;
+                mCtx.beginPath();
+                if (s.length === 1) { mCtx.arc(s[0].x, s[0].y, LW / 2, 0, Math.PI * 2); mCtx.fillStyle = mCtx.strokeStyle; mCtx.fill(); continue; }
+                if (s.length === 2) { mCtx.moveTo(s[0].x, s[0].y); mCtx.lineTo(s[1].x, s[1].y); mCtx.stroke(); continue; }
+                mCtx.moveTo(s[0].x, s[0].y);
+                for (let i = 1; i < s.length - 1; i++) mCtx.quadraticCurveTo(s[i].x, s[i].y, (s[i].x + s[i+1].x) / 2, (s[i].y + s[i+1].y) / 2);
+                mCtx.lineTo(s[s.length - 1].x, s[s.length - 1].y);
+                mCtx.stroke();
+            }
+        };
+
+        // ── Pointer events ──
+        mc.addEventListener('pointerdown', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (e.pointerId != null) try { mc.setPointerCapture(e.pointerId); } catch (_) {}
+            drawing = true;
+            const c = getC(e);
+            curStroke = [c];
+            last = c;
+            setStyles();
+            mCtx.beginPath();
+            mCtx.arc(c.x, c.y, LW / 2, 0, Math.PI * 2);
+            mCtx.fillStyle = mCtx.strokeStyle;
+            mCtx.fill();
+        }, { passive: false });
+
+        mc.addEventListener('pointermove', (e) => {
+            if (!drawing) return;
+            e.preventDefault(); e.stopPropagation();
+            const c = getC(e);
+            curStroke.push(c);
+            const n = curStroke.length;
+            setStyles();
+            mCtx.beginPath();
+            if (n >= 3) {
+                const p0 = curStroke[n - 3], p1 = curStroke[n - 2];
+                mCtx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                mCtx.quadraticCurveTo(p1.x, p1.y, (p1.x + c.x) / 2, (p1.y + c.y) / 2);
+            } else {
+                mCtx.moveTo(last.x, last.y);
+                mCtx.lineTo(c.x, c.y);
+            }
+            mCtx.stroke();
+            last = c;
+        }, { passive: false });
+
+        const endStroke = (e) => {
+            if (!drawing) return;
+            drawing = false;
+            if (e?.pointerId != null) try { mc.releasePointerCapture(e.pointerId); } catch (_) {}
+            if (curStroke.length) { modalStrokes.push([...curStroke]); curStroke = []; }
+            last = null;
+            redraw();
+        };
+        mc.addEventListener('pointerup', endStroke);
+        mc.addEventListener('pointercancel', endStroke);
+
+        // ── Buttons ──
+        const close = (save) => {
+            if (save && modalStrokes.length > 0) {
+                this._signatureDataUrl = mc.toDataURL('image/png');
+                this.strokes = modalStrokes;
+                this.hasDrawn = true;
+                this.wrapper?.classList.add('has-signature');
+                this.updateTimestamp();
+                this._renderPreview();
+            }
+            this._modalOpen = false;
+            document.body.style.overflow = prevOverflow;
+            window.removeEventListener('resize', onResize);
+            overlay.remove();
+        };
+
+        overlay.querySelector('[data-action="cancel"]').addEventListener('click', () => close(false));
+        overlay.querySelector('[data-action="confirm"]').addEventListener('click', () => close(true));
+        overlay.querySelector('[data-action="clear"]').addEventListener('click', () => { modalStrokes = []; curStroke = []; redraw(); });
+
+        // ── Resize ──
+        const onResize = () => sizeModal();
+        window.addEventListener('resize', onResize);
+
+        requestAnimationFrame(() => sizeModal());
+    }
+
+    /* ═══════════════════════════════════════════
+       Preview (modal → inline canvas)
+       ═══════════════════════════════════════════ */
+
+    _renderPreview() {
+        if (!this._signatureDataUrl) return;
+        const img = new Image();
+        img.onload = () => {
+            const r = window.devicePixelRatio || 1;
+            const cw = this.canvas.width / r, ch = this.canvas.height / r;
+            this.ctx.clearRect(0, 0, cw, ch);
+            // Fit mantendo proporção
+            const ia = img.width / img.height, ca = cw / ch;
+            let dw, dh;
+            if (ia > ca) { dw = cw * 0.92; dh = dw / ia; }
+            else { dh = ch * 0.92; dw = dh * ia; }
+            this.ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+        };
+        img.src = this._signatureDataUrl;
+    }
+
+    /* ═══════════════════════════════════════════
+       Utilitários
+       ═══════════════════════════════════════════ */
 
     clear() {
-        const ratio = window.devicePixelRatio || 1;
-        this.ctx.clearRect(0, 0, this.canvas.width / ratio, this.canvas.height / ratio);
+        const r = window.devicePixelRatio || 1;
+        this.ctx.clearRect(0, 0, this.canvas.width / r, this.canvas.height / r);
         this.strokes = [];
         this.currentStroke = [];
         this._lastPoint = null;
+        this._signatureDataUrl = null;
         this.hasDrawn = false;
-        this.wrapper?.classList.remove('has-signature');
-        this.wrapper?.classList.remove('active');
-        
-        if (this.metadataTime) {
-            this.metadataTime.textContent = "Aguardando assinatura...";
-        }
+        this.wrapper?.classList.remove('has-signature', 'active');
+        if (this.metadataTime) this.metadataTime.textContent = "Aguardando assinatura...";
         this.auditMetadata.timestamp = null;
     }
 
-    isEmpty() {
-        return !this.hasDrawn;
-    }
+    isEmpty() { return !this.hasDrawn; }
 
     toPNG() {
         if (this.isEmpty()) return null;
-        return this.canvas.toDataURL('image/png');
+        return this._signatureDataUrl || this.canvas.toDataURL('image/png');
     }
 
     updateTimestamp() {
         const now = new Date();
         this.auditMetadata.timestamp = now.toISOString();
-        
         if (this.metadataTime) {
-            const formatador = new Intl.DateTimeFormat('pt-BR', {
-                dateStyle: 'short',
-                timeStyle: 'medium'
-            });
-            this.metadataTime.textContent = `Assinado em: ${formatador.format(now)}`;
+            this.metadataTime.textContent = `Assinado em: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(now)}`;
         }
     }
 
     async fetchClientIP() {
-        const fallbackIP = "Indisponível (Offline/AdBlock)";
+        const fb = "Indisponível (Offline/AdBlock)";
         try {
-            const response = await fetch('https://api.ipify.org?format=json', { 
-                method: 'GET',
-                signal: AbortSignal.timeout(3000)
-            });
-            if (response.ok) {
-                const data = await response.json();
-                this.auditMetadata.ip = data.ip || fallbackIP;
-            } else {
-                this.auditMetadata.ip = fallbackIP;
-            }
-        } catch (e) {
-            this.auditMetadata.ip = fallbackIP;
-        }
-
-        if (this.metadataIP) {
-            this.metadataIP.textContent = `IP: ${this.auditMetadata.ip}`;
-        }
+            const res = await fetch('https://api.ipify.org?format=json', { method: 'GET', signal: AbortSignal.timeout(3000) });
+            if (res.ok) { const d = await res.json(); this.auditMetadata.ip = d.ip || fb; }
+            else this.auditMetadata.ip = fb;
+        } catch (_) { this.auditMetadata.ip = fb; }
+        if (this.metadataIP) this.metadataIP.textContent = `IP: ${this.auditMetadata.ip}`;
     }
 
     getMetadata() {
-        return {
-            ...this.auditMetadata,
-            timestamp: this.auditMetadata.timestamp || new Date().toISOString()
-        };
+        return { ...this.auditMetadata, timestamp: this.auditMetadata.timestamp || new Date().toISOString() };
     }
 }
 
-// Expõe globalmente para inicialização no app.js
 window.CanvasSignature = CanvasSignature;
