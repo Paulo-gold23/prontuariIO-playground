@@ -13,10 +13,59 @@
      * @param {string} message - Texto da mensagem
      * @param {'success'|'error'|'info'|'warning'} type
      */
-    function showToast(message, type) {
+    /**
+     * Exibe uma notificação toast temporária.
+     * @param {string} message - Texto da mensagem
+     * @param {'success'|'error'|'info'|'warning'|'loading'} type
+     * @param {number} [duration] - Tempo de exibição em ms (0 para não remover automaticamente)
+     * @returns {HTMLElement} O elemento toast criado
+     */
+    function showToast(message, type, duration) {
         type = type || 'success';
+        if (duration === undefined) {
+            duration = 4000;
+        }
+
         var container = document.getElementById('toastContainer');
-        if (!container) return;
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+
+            if (!document.getElementById('toast-styles-injected')) {
+                var style = document.createElement('style');
+                style.id = 'toast-styles-injected';
+                style.textContent =
+                    '.toast-container {' +
+                    '    position: fixed;' +
+                    '    top: 24px;' +
+                    '    right: 24px;' +
+                    '    z-index: 9999;' +
+                    '    display: flex;' +
+                    '    flex-direction: column;' +
+                    '    gap: 12px;' +
+                    '}' +
+                    '.toast {' +
+                    '    min-width: 300px;' +
+                    '    padding: 16px 20px;' +
+                    '    border-radius: 16px;' +
+                    '    background: white;' +
+                    '    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);' +
+                    '    display: flex;' +
+                    '    align-items: center;' +
+                    '    gap: 12px;' +
+                    '    border: 1px solid #f1f5f9;' +
+                    '    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;' +
+                    '    transition: opacity 0.3s, transform 0.3s;' +
+                    '}' +
+                    '@keyframes slideInRight {' +
+                    '    from { transform: translateX(100%); opacity: 0; }' +
+                    '    to { transform: translateX(0); opacity: 1; }' +
+                    '}';
+                document.head.appendChild(style);
+            }
+        }
 
         var toast = document.createElement('div');
         toast.className = 'toast';
@@ -25,6 +74,7 @@
         if (type === 'error')   icon = 'ph-fill ph-warning-circle text-rose-500';
         if (type === 'info')    icon = 'ph-fill ph-info text-indigo-500';
         if (type === 'warning') icon = 'ph-fill ph-warning text-amber-500';
+        if (type === 'loading') icon = 'ph-bold ph-spinner animate-spin text-slate-500';
 
         toast.innerHTML =
             '<i class="' + icon + ' text-2xl"></i>' +
@@ -32,12 +82,15 @@
 
         container.appendChild(toast);
 
-        setTimeout(function () {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(20px)';
-            toast.style.transition = '0.3s';
-            setTimeout(function () { toast.remove(); }, 300);
-        }, 4000);
+        if (duration > 0) {
+            setTimeout(function () {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(function () { toast.remove(); }, 300);
+            }, duration);
+        }
+
+        return toast;
     }
 
     /**

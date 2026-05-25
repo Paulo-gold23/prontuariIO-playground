@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Supabase SDK e Auth Guard -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
     <script src="auth-guard.js"></script>
     <script src="dark-mode.js"></script>
     <script>
@@ -319,7 +320,7 @@
                         <div class="relative flex-1">
                           <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                           <input id="searchPacienteRecepcao" type="text" placeholder="Buscar por nome ou convênio..."
-                            class="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all"
+                            class="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all"
                             oninput="filtrarLista()">
                           <button id="searchClearRecepcao" onclick="limparBusca()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-200 hover:bg-slate-300 rounded-full flex items-center justify-center transition-all">
                             <i class="ph-bold ph-x text-[10px] text-slate-600"></i>
@@ -587,19 +588,19 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Cirurgias Anteriores / Internações</label>
-                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Cirurgias recentes, reações anestésicas, internações..."></textarea>
+                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Cirurgias recentes, reações anestésicas, internações..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Condições de Pele Prévias</label>
-                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Psoríase, dermatite, vitiligo, melasma, rosácea..."></textarea>
+                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Psoríase, dermatite, vitiligo, melasma, rosácea..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Histórico Familiar Relevante</label>
-                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças autoimunes, queloides...">
+                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças autoimunes, queloides...">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Observações Adicionais</label>
-                            <textarea id="txt_observacoes" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Qualquer informação relevante não coberta acima..."></textarea>
+                            <textarea id="txt_observacoes" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400" placeholder="Qualquer informação relevante não coberta acima..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -959,9 +960,9 @@
         initCustomSelects();
 
         // === INTEGRAÇÃO COM N8N ===
-        const WEBHOOK_CADASTRO = "https://n8n.srv1181762.hstgr.cloud/webhook/cadastroPaciente";
-        const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
-        const WEBHOOK_EXCLUIR = "https://n8n.srv1181762.hstgr.cloud/webhook/delete_paciente";
+        const WEBHOOK_CADASTRO = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/cadastroPaciente";
+        const WEBHOOK_LISTAR = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/listarPacientes";
+        const WEBHOOK_EXCLUIR = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/delete_paciente";
 
         // Cache de todos os pacientes para filtro client-side
         let allPacientesData = [];

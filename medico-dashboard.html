@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
   <script src="auth-guard.js"></script>
   <script src="dark-mode.js"></script>
   <!-- PDF.js para gerar thumbnails de exames PDF -->
@@ -126,7 +127,7 @@
           <i class="ph-bold ph-magnifying-glass text-lg sm:text-xl text-slate-300"></i>
         </div>
         <input type="text" id="searchPaciente" placeholder="Buscar paciente por nome..."
-          class="search-input w-full pl-12 sm:pl-14 pr-12 py-3.5 sm:py-4 bg-white border border-slate-200 rounded-2xl sm:rounded-[1.25rem] text-sm sm:text-base font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:border-emerald-400 focus:ring-0 shadow-sm">
+          class="search-input w-full pl-12 sm:pl-14 pr-12 py-3.5 sm:py-4 bg-white border border-slate-200 rounded-2xl sm:rounded-[1.25rem] text-base sm:text-sm font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:border-emerald-400 focus:ring-0 shadow-sm">
         <button id="searchClear" onclick="clearSearch()" class="search-clear absolute inset-y-0 right-0 pr-4 flex items-center hidden">
           <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
             <i class="ph-bold ph-x text-xs text-slate-400"></i>
@@ -356,8 +357,8 @@
   </div>
 
   <script>
-    const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
-    const WEBHOOK_HISTORICO = "https://n8n.srv1181762.hstgr.cloud/webhook/consultas_finalizadas"; // URL fix
+    const WEBHOOK_LISTAR = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/listarPacientes";
+    const WEBHOOK_HISTORICO = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/consultas_finalizadas"; // URL fix
     
     // Estado do modal ativo
     let _modalPacienteAtual = { id: null, nome: null, uploadIniciado: false };
@@ -897,7 +898,7 @@
       btn.disabled = true;
       try {
         const authHeaders = typeof window.getAuthHeaders === 'function' ? await window.getAuthHeaders() : {};
-        const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/gerarRelatorioImagens", {
+        const resp = await fetch((window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/gerarRelatorioImagens", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ consulta_id, paciente_id })
@@ -951,7 +952,7 @@
         const authHeaders = typeof window.getAuthHeaders === 'function' ? await window.getAuthHeaders() : {};
 
         // Aguarda a resposta do n8n que já inclui pdf_path no Respond Success
-        const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/mergeRelatorioPDF", {
+        const resp = await fetch((window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/mergeRelatorioPDF", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ paciente_id, medico_id })
