@@ -41,11 +41,11 @@
             /* Gradients & Fundos Suaves */
             html.dark .bg-gradient-to-br { background: linear-gradient(to bottom right, #1e293b, #0f172a) !important; }
             html.dark .bg-slate-100, html.dark .bg-slate-200 { background-color: #334155 !important; color: #f1f5f9 !important; }
-            html.dark .bg-indigo-50 { background-color: rgba(79, 70, 229, 0.15) !important; color: #a5b4fc !important; }
+            html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; color: #6ee7b7 !important; }
             html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; color: #6ee7b7 !important; }
             html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; color: #fcd34d !important; }
             html.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.15) !important; color: #fda4af !important; }
-            html.dark .bg-indigo-100 { background-color: rgba(79, 70, 229, 0.25) !important; }
+            html.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.25) !important; }
             html.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.25) !important; }
             
             /* Sombras ajustadas para o modo escuro */
@@ -78,8 +78,8 @@
                 border: 1px solid #334155 !important;
             }
 
-            /* Header do modal (bg-indigo-50, bg-slate-50, border-b) */
-            html.dark [role="dialog"] .bg-indigo-50,
+            /* Header do modal (bg-emerald-50, bg-slate-50, border-b) */
+            html.dark [role="dialog"] .bg-emerald-50,
             html.dark [role="dialog"] .bg-slate-50,
             html.dark .relative.bg-white.rounded-2xl > div:first-child,
             html.dark .relative.bg-white.rounded-xl > div:first-child {
@@ -88,24 +88,24 @@
             }
 
             /* Título do header do modal */
-            html.dark [role="dialog"] .text-indigo-900,
-            html.dark [role="dialog"] h3.text-indigo-900 {
-                color: #a5b4fc !important;
+            html.dark [role="dialog"] .text-emerald-900,
+            html.dark [role="dialog"] h3.text-emerald-900 {
+                color: #6ee7b7 !important;
             }
 
             /* Cards de checkbox dentro do modal (bg-slate-50 + border) */
             html.dark [role="dialog"] label.bg-slate-50,
             html.dark [role="dialog"] label.flex.bg-slate-50,
             html.dark [role="dialog"] label.bg-rose-50,
-            html.dark [role="dialog"] label.bg-indigo-50 {
+            html.dark [role="dialog"] label.bg-emerald-50 {
                 background-color: #2d3d54 !important;
                 border-color: #3e5068 !important;
             }
             html.dark [role="dialog"] label.bg-slate-50:hover,
             html.dark [role="dialog"] label.flex.bg-slate-50:hover,
             html.dark [role="dialog"] label.bg-rose-50:hover,
-            html.dark [role="dialog"] label.bg-indigo-50:hover,
-            html.dark [role="dialog"] label.hover\\:bg-indigo-50:hover,
+            html.dark [role="dialog"] label.bg-emerald-50:hover,
+            html.dark [role="dialog"] label.hover\\:bg-emerald-50:hover,
             html.dark [role="dialog"] label.hover\\:bg-rose-100:hover {
                 background-color: #374d68 !important;
                 border-color: #5b789e !important;
@@ -118,9 +118,9 @@
             html.dark [role="dialog"] label .text-slate-500 {
                 color: #94a3b8 !important;
             }
-            html.dark [role="dialog"] .text-indigo-800,
-            html.dark [role="dialog"] label.text-indigo-800 {
-                color: #a5b4fc !important;
+            html.dark [role="dialog"] .text-emerald-800,
+            html.dark [role="dialog"] label.text-emerald-800 {
+                color: #6ee7b7 !important;
             }
 
             /* Inputs e Textareas dentro de modais */
@@ -191,8 +191,8 @@
                 background-color: #192234 !important;
             }
 
-            /* Cards de info: CHEGADA / CONVÊNIO (bg-indigo-50/50) */
-            html.dark #modalDetalhes .bg-indigo-50\/50 {
+            /* Cards de info: CHEGADA / CONVÊNIO (bg-emerald-50/50) */
+            html.dark #modalDetalhes .bg-emerald-50\/50 {
                 background-color: #1e2d47 !important;
                 border-color: #2d4a72 !important;
             }
@@ -203,9 +203,9 @@
                 border-color: #334155 !important;
             }
 
-            /* Labels dos cards: "CHEGADA", "CONVÊNIO" (text-indigo-400) */
-            html.dark #modalDetalhes .text-indigo-400 {
-                color: #818cf8 !important;
+            /* Labels dos cards: "CHEGADA", "CONVÊNIO" (text-emerald-400) */
+            html.dark #modalDetalhes .text-emerald-400 {
+                color: #34d399 !important;
             }
 
             /* Labels dos cards: "PACIENTE ID" (text-slate-400) */
@@ -315,10 +315,10 @@
                 background-color: #1e293b !important;
             }
 
-            /* Ícone de avatar (bg-indigo-100 border-indigo-200) */
-            html.dark #modalDetalhes .bg-indigo-100 {
-                background-color: rgba(79,70,229,0.25) !important;
-                border-color: rgba(79,70,229,0.4) !important;
+            /* Ícone de avatar (bg-emerald-100 border-emerald-200) */
+            html.dark #modalDetalhes .bg-emerald-100 {
+                background-color: rgba(16,185,129,0.25) !important;
+                border-color: rgba(16,185,129,0.4) !important;
             }
 
             /* Nav / Header Especifico */
@@ -335,13 +335,13 @@
             html.dark .text-slate-500 { color: #94a3b8 !important; }
             
             /* Correções de Contraste para Ícones, Badges e Nomes (Modo Escuro) */
-            html.dark .text-indigo-600, html.dark .text-indigo-700 { color: #818cf8 !important; }
+            html.dark .text-emerald-600, html.dark .text-emerald-700 { color: #34d399 !important; }
             html.dark .text-emerald-600, html.dark .text-emerald-700 { color: #34d399 !important; }
             html.dark .text-amber-600, html.dark .text-amber-700 { color: #fbbf24 !important; }
             html.dark .text-rose-500, html.dark .text-rose-600, html.dark .text-rose-700 { color: #fb7185 !important; }
             
             /* Hover do nome na fila (Group Hover) */
-            html.dark .group:hover .group-hover\\:text-indigo-700 { color: #a5b4fc !important; }
+            html.dark .group:hover .group-hover\\:text-emerald-500 { color: #34d399 !important; }
             html.dark .group:hover .group-hover\\:text-emerald-500 { color: #34d399 !important; }
             html.dark .group:hover .group-hover\\:text-white { color: #ffffff !important; }
         `;
@@ -356,7 +356,7 @@
             btns.forEach(btn => {
                 btn.innerHTML = isDarkActive
                     ? '<i class="ph-bold ph-sun text-xl text-amber-400"></i>'
-                    : '<i class="ph-bold ph-moon text-xl text-indigo-500"></i>';
+                    : '<i class="ph-bold ph-moon text-xl text-emerald-500"></i>';
             });
         }
 

@@ -37,3 +37,16 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
+
+# AI agents and scratch files
+.agents/
+scratch/
+*.bak
+subfolder_not_needed_using_absolute/
+verify_signed_urls.js
+search_transcript.py
+extract_steps.py
+assinatura-stylus.md
+pdf-path-fix.md
+ORIGINAL_REQUEST.md
+PROJECT.md

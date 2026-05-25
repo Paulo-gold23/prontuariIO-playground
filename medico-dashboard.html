@@ -6,11 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Médico — prontuar.IO</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="Dashboard do Médico - prontuar.IO. Acompanhe a lista de pacientes, histórico de consultas e assine digitalmente." />
+  <meta property="og:title" content="Dashboard Médico - prontuar.IO" />
+  <meta property="og:description" content="Acompanhe a lista de pacientes, histórico de consultas e assine digitalmente." />
+  <meta property="og:type" content="website" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="auth-guard.js"></script>
   <script src="dark-mode.js"></script>
+  <script src="js/ui/canvas-signature.js"></script>
+  <script src="js/ui/toast.js"></script>
+  <link rel="stylesheet" href="styles.css">
   <!-- PDF.js para gerar thumbnails de exames PDF -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="clinica-cicatrize/upload-manager.js"></script>
@@ -78,7 +85,11 @@
           <span class="text-[10px] text-slate-500 font-medium">CRM Ativo • Online</span>
         </div>
         
-        <a href="recepcao.html" class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 text-white font-bold rounded-lg sm:rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-[10px] sm:text-sm" title="Ir para Recepção">
+        <button onclick="abrirModalPerfil()" class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 text-white font-bold rounded-lg sm:rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-[10px] sm:text-sm" title="Meu Perfil">
+          <i class="ph-bold ph-user-circle text-sm sm:text-lg"></i>
+          <span>Meu Perfil</span>
+        </button>
+        <a class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900 text-white font-bold rounded-lg sm:rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 text-[10px] sm:text-sm" href="recepcao.html" title="Ir para Recepção">
           <i class="ph-bold ph-users text-sm sm:text-lg"></i>
           <span>Recepção</span>
         </a>
@@ -96,6 +107,23 @@
   </nav>
 
   <main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
+    <!-- Banner de Perfil Incompleto -->
+    <div id="banner-perfil-incompleto" class="hidden mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-start sm:items-center gap-3">
+        <div class="p-2 bg-amber-100 rounded-xl text-amber-600">
+          <i class="ph-fill ph-warning-octagon text-xl sm:text-2xl"></i>
+        </div>
+        <div>
+          <h4 class="font-extrabold text-slate-900 text-sm sm:text-base leading-tight">Perfil Profissional Incompleto</h4>
+          <p class="text-xs text-amber-800 mt-0.5">Seus dados e assinatura digital são obrigatórios para habilitar a emissão de carimbos nos prontuários médicos.</p>
+        </div>
+      </div>
+      <button onclick="abrirModalPerfil()" class="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-200">
+        <i class="ph-bold ph-pencil-simple-line"></i>
+        Configurar Perfil
+      </button>
+    </div>
+
     <!-- Header Stats -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 sm:gap-6 mb-8 sm:mb-12">
       <div>
@@ -148,8 +176,8 @@
           <button class="filter-pill px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-white text-slate-500 border border-slate-200 hover:border-emerald-300 hover:text-emerald-600 whitespace-nowrap" data-filter="FINALIZADO" onclick="setFilter('FINALIZADO', this)">
             <i class="ph-bold ph-check-circle mr-0.5 sm:mr-1 text-emerald-400"></i>Finalizado
           </button>
-          <button class="filter-pill px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-white text-slate-500 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 whitespace-nowrap" data-filter="CADASTRADO" onclick="setFilter('CADASTRADO', this)">
-            <i class="ph-bold ph-user-plus mr-0.5 sm:mr-1 text-indigo-400"></i>Cadastrado
+          <button class="filter-pill px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-white text-slate-500 border border-slate-200 hover:border-sky-300 hover:text-sky-600 whitespace-nowrap" data-filter="CADASTRADO" onclick="setFilter('CADASTRADO', this)">
+            <i class="ph-bold ph-user-plus mr-0.5 sm:mr-1 text-sky-400"></i>Cadastrado
           </button>
         </div>
 
@@ -209,7 +237,7 @@
           </div>
           <h3 class="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight">Atendimentos Recentes</h3>
         </div>
-        <a href="#" class="text-[10px] sm:text-xs font-bold text-slate-400 hover:text-emerald-600 transition-colors uppercase tracking-widest">Ver Todos <i class="ph ph-caret-right inline"></i></a>
+        <a class="text-[10px] sm:text-xs font-bold text-slate-400 hover:text-emerald-600 transition-colors uppercase tracking-widest" href="#">Ver Todos <i class="ph ph-caret-right inline"></i></a>
       </div>
 
       <div id="listaHistorico" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -260,7 +288,7 @@
             </button>
           </div>
           <div class="pr-4 sm:pr-6 flex items-center">
-            <button id="btn-gerar-consolidado" onclick="gerarRelatorioConsolidado()" class="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-indigo-600 text-white text-[10px] sm:text-xs font-black rounded-lg hover:bg-indigo-700 transition-all uppercase tracking-wider shadow-sm shadow-indigo-200">
+            <button id="btn-gerar-consolidado" onclick="gerarRelatorioConsolidado()" class="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-600 text-white text-[10px] sm:text-xs font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-wider shadow-sm shadow-emerald-100">
               <i class="ph-bold ph-files text-sm"></i> <span class="hidden sm:inline">Gerar Consolidado</span><span class="sm:hidden">Consolidado</span>
             </button>
           </div>
@@ -348,12 +376,138 @@
   <div id="modalProgressoConsolidado" class="hidden fixed inset-0 z-[3000] flex items-center justify-center px-4">
     <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-md"></div>
     <div class="relative bg-white rounded-[2rem] shadow-[0_32px_96px_-16px_rgba(0,0,0,0.25)] p-8 w-full max-w-sm animate-in flex flex-col items-center text-center">
-      <i class="ph ph-spinner animate-spin text-5xl text-indigo-600 mb-4"></i>
+      <i class="ph ph-spinner animate-spin text-5xl text-emerald-600 mb-4"></i>
       <h3 class="text-xl font-black text-slate-900 tracking-tight mb-2">Gerando Consolidado</h3>
       <p class="text-sm font-medium text-slate-500 mb-2">Processando histórico e unindo anexos PDF...</p>
       <p class="text-xs text-slate-400">Isso pode levar alguns segundos.</p>
     </div>
   </div>
+
+  <!-- Modal Perfil do Médico -->
+  <div id="modalPerfil" class="hidden fixed inset-0 z-[1500] flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onclick="fecharModalPerfil()"></div>
+    <div class="relative bg-white w-full max-w-lg rounded-[2rem] shadow-[0_32px_96px_-16px_rgba(0,0,0,0.2)] overflow-hidden animate-in flex flex-col max-h-[90vh]">
+      
+      <!-- Header -->
+      <div class="px-6 pt-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+        <div>
+          <h3 class="text-xl font-black text-slate-900 tracking-tight">Meu Perfil Profissional</h3>
+          <p class="text-xs text-slate-500 font-medium">Configure seus dados e carimbo de assinatura digital</p>
+        </div>
+        <button onclick="fecharModalPerfil()" class="p-2 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-all">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="px-6 py-4 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+        <!-- Form Fields -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome Completo</label>
+            <input type="text" id="perfil-nome-completo" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm font-semibold text-slate-800 transition-all">
+          </div>
+
+          <div class="col-span-2 sm:col-span-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome de Exibição</label>
+            <input type="text" id="perfil-nome" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm font-semibold text-slate-800 transition-all">
+          </div>
+
+          <div class="col-span-2 sm:col-span-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Especialidade</label>
+            <input type="text" id="perfil-especialidade" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm font-semibold text-slate-800 transition-all">
+          </div>
+
+          <div class="col-span-1" id="perfil-crm-container">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">CRM</label>
+            <input type="text" id="perfil-crm" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm font-semibold text-slate-800 transition-all">
+          </div>
+
+          <div class="col-span-1" id="perfil-uf-container">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">UF CRM</label>
+            <select id="perfil-uf" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm font-semibold text-slate-800 transition-all">
+              <option value="">Selecione...</option>
+              <option value="AC">AC</option>
+              <option value="AL">AL</option>
+              <option value="AM">AM</option>
+              <option value="AP">AP</option>
+              <option value="BA">BA</option>
+              <option value="CE">CE</option>
+              <option value="DF">DF</option>
+              <option value="ES">ES</option>
+              <option value="GO">GO</option>
+              <option value="MA">MA</option>
+              <option value="MG">MG</option>
+              <option value="MS">MS</option>
+              <option value="MT">MT</option>
+              <option value="PA">PA</option>
+              <option value="PB">PB</option>
+              <option value="PE">PE</option>
+              <option value="PI">PI</option>
+              <option value="PR">PR</option>
+              <option value="RJ">RJ</option>
+              <option value="RN">RN</option>
+              <option value="RO">RO</option>
+              <option value="RR">RR</option>
+              <option value="RS">RS</option>
+              <option value="SC">SC</option>
+              <option value="SE">SE</option>
+              <option value="SP">SP</option>
+              <option value="TO">TO</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Assinatura Digital Section -->
+        <div class="border-t border-slate-100 pt-4">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Assinatura Digital (Carimbo)</label>
+          
+          <!-- Seção de Preview (Caso já tenha assinatura) -->
+          <div id="perfil-assinatura-preview-container" class="hidden border border-slate-200 rounded-2xl p-4 bg-slate-50 flex flex-col items-center justify-center gap-3">
+            <img id="perfil-assinatura-img" class="max-h-24 object-contain" alt="Assinatura Digital Salva">
+            <button type="button" onclick="ativarEdicaoAssinatura()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+              <i class="ph-bold ph-pencil-simple"></i> Alterar Assinatura
+            </button>
+          </div>
+
+          <!-- Seção do Canvas para desenhar (Caso não tenha ou decida alterar) -->
+          <div id="perfil-assinatura-canvas-container" class="space-y-2">
+            <div id="canvas-perfil-wrapper" class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[5/2]">
+              <canvas id="canvasAssinaturaPerfil"></canvas>
+              <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-semibold select-none">
+                Assine aqui com o stylus ou mouse
+              </div>
+            </div>
+            
+            <div class="flex justify-between items-center text-[10px] text-slate-400 font-medium px-1">
+              <div class="flex flex-col">
+                <span id="perfil-meta-time">Aguardando assinatura...</span>
+                <span id="perfil-meta-ip">IP: Carregando...</span>
+              </div>
+              <button type="button" id="perfil-btn-limpar" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-lg font-bold transition-all flex items-center gap-1">
+                <i class="ph-bold ph-trash"></i> Limpar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+        <button onclick="fecharModalPerfil()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-200 transition-all">
+          Cancelar
+        </button>
+        <button id="perfil-btn-salvar" onclick="salvarPerfilMedico()" class="flex-1 py-3 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2">
+          <i class="ph-bold ph-floppy-disk text-base"></i>
+          <span>Salvar Perfil</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <script>
     const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
@@ -369,7 +523,7 @@
 
     async function garantirMedicoId() {
       let atual = JSON.parse(localStorage.getItem("medico_ativo") || "{}");
-      if (atual && atual.id) return atual;
+      if (atual && atual.id && ('tipo_clinica' in atual)) return atual;
 
       // Proteção: verificar se supabaseClient existe antes de usar
       if (!window.supabaseClient || !window.supabaseClient.auth) {
@@ -393,7 +547,11 @@
         id: medicoDb.id,
         auth_id: session.user.id,
         nome: atual.nome || medicoDb.nome || "Dr(a). Medico",
+        nome_completo: atual.nome_completo || medicoDb.nome_completo || "",
         crm: atual.crm || medicoDb.crm || "",
+        uf_crm: atual.uf_crm || medicoDb.uf_crm || "",
+        especialidade: atual.especialidade || medicoDb.especialidade || "",
+        assinatura_url: atual.assinatura_url || medicoDb.assinatura_url || null,
         tipo_clinica: medicoDb.tipo_clinica || atual.tipo_clinica || null
       };
       localStorage.setItem("medico_ativo", JSON.stringify(atual));
@@ -527,9 +685,9 @@
         } else if (status === 'FINALIZADO' || status === 'ATENDIDO') {
           badgeBg = 'bg-emerald-100'; badgeText = 'text-emerald-700';
         } else if (status === 'EM ATENDIMENTO') {
-          badgeBg = 'bg-indigo-100'; badgeText = 'text-indigo-700';
+          badgeBg = 'bg-sky-100'; badgeText = 'text-sky-700';
         } else if (status === 'CADASTRADO') {
-          badgeBg = 'bg-indigo-100'; badgeText = 'text-indigo-700';
+          badgeBg = 'bg-slate-100'; badgeText = 'text-slate-700';
         }
 
         const card = document.createElement('div');
@@ -559,7 +717,7 @@
             <button onclick="verHistorico('${p.id}', '${p.nome.replace(/'/g, "\\'")}')" class="flex-1 py-2.5 sm:py-3 px-2 bg-slate-100 text-slate-600 text-[10px] sm:text-xs font-black rounded-lg sm:rounded-xl hover:bg-slate-200 transition-all uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2">
             <i class="ph-bold ph-clock-counter-clockwise text-sm"></i> <span>Histórico</span>
           </button>
-          <button onclick="atenderPaciente('${p.id}', '${p.nome.replace(/'/g, "\'")}', '${p.convenio || 'Particular'}')" class="flex-1 py-2.5 sm:py-3 px-2 bg-indigo-600 text-white text-[10px] sm:text-xs font-black rounded-lg sm:rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2">
+          <button onclick="atenderPaciente('${p.id}', '${p.nome.replace(/'/g, "\'")}', '${p.convenio || 'Particular'}')" class="flex-1 py-2.5 sm:py-3 px-2 bg-emerald-600 text-white text-[10px] sm:text-xs font-black rounded-lg sm:rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2">
               <i class="ph-bold ph-plus-circle text-sm"></i> <span>Novo Atend.</span>
             </button>
           </div>`;
@@ -658,22 +816,22 @@
 
           // Botões de ação
           const btnLaudo = pdfUrl
-            ? `<a href="${pdfUrl}" target="_blank"
+            ? `<a target="_blank" href="${pdfUrl}"
                  class="flex items-center gap-1 px-3 py-2 bg-slate-900 text-white text-[9px] font-black rounded-lg hover:bg-emerald-600 transition-all uppercase tracking-wider">
                 <i class="ph-bold ph-file-text text-xs"></i> Ver Laudo
                </a>`
             : '';
 
           const btnImagens = imagensUrl
-            ? `<a href="${imagensUrl}" target="_blank"
-                 class="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-[9px] font-black rounded-lg hover:bg-indigo-700 transition-all uppercase tracking-wider shadow-sm">
+            ? `<a target="_blank" href="${imagensUrl}"
+                 class="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white text-[9px] font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-wider shadow-sm shadow-emerald-100">
                 <i class="ph-bold ph-images text-xs"></i> Imagens
                </a>`
             : '';
 
           const btnVoz = audioUrl
-            ? `<a href="${audioUrl}" target="_blank"
-                 class="flex items-center gap-1 px-3 py-2 bg-violet-600 text-white text-[9px] font-black rounded-lg hover:bg-violet-700 transition-all uppercase tracking-wider shadow-sm">
+            ? `<a target="_blank" href="${audioUrl}"
+                 class="flex items-center gap-1 px-3 py-2 bg-sky-600 text-white text-[9px] font-black rounded-lg hover:bg-sky-700 transition-all uppercase tracking-wider shadow-sm shadow-sky-100">
                 <i class="ph-bold ph-microphone text-xs"></i> Voz
                </a>`
             : '';
@@ -763,7 +921,7 @@
           // ── Build card com os 3 botões sempre visíveis ──
           // Botão 1: PDF Prontuário
           const btnProntuario = pdfUrl
-            ? `<a href="${pdfUrl}" target="_blank"
+            ? `<a target="_blank" href="${pdfUrl}"
                  class="flex items-center gap-1 px-3 py-2 bg-slate-900 text-white text-[9px] font-black rounded-lg hover:bg-emerald-600 transition-all uppercase tracking-wider">
                 <i class="ph-bold ph-file-text text-xs"></i> Prontuário
                </a>`
@@ -788,7 +946,7 @@
           }
 
           const btnImagens = imagensReportUrl
-            ? `<a href="${imagensReportUrl}" target="_blank"
+            ? `<a target="_blank" href="${imagensReportUrl}"
                  class="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white text-[9px] font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-wider shadow-sm shadow-emerald-200">
                 <i class="ph-bold ph-images text-xs"></i> Imagens
                </a>`
@@ -992,13 +1150,327 @@
       }
     };
 
+
+    // ── Perfil do Médico & Assinatura Salva ──
+    let canvasAssinaturaPerfilInstance = null;
+
+    window.abrirModalPerfil = async function() {
+      try {
+        // Garantir dados atualizados do médico
+        const medico = await garantirMedicoId();
+        
+        const isCicatrize = medico.tipo_clinica === 'cicatrize';
+        const crmContainer = document.getElementById("perfil-crm-container");
+        const ufContainer = document.getElementById("perfil-uf-container");
+        if (isCicatrize) {
+          if (crmContainer) crmContainer.classList.add("hidden");
+          if (ufContainer) ufContainer.classList.add("hidden");
+        } else {
+          if (crmContainer) crmContainer.classList.remove("hidden");
+          if (ufContainer) ufContainer.classList.remove("hidden");
+        }
+        
+        document.getElementById("perfil-nome-completo").value = medico.nome_completo || '';
+        document.getElementById("perfil-nome").value = medico.nome || '';
+        document.getElementById("perfil-especialidade").value = medico.especialidade || '';
+        document.getElementById("perfil-crm").value = medico.crm || '';
+        document.getElementById("perfil-uf").value = medico.uf_crm || '';
+
+        const modal = document.getElementById("modalPerfil");
+        modal.classList.remove("hidden");
+
+        if (medico.assinatura_url) {
+          // Exibir preview
+          if (window.getSignedUrlForFile) {
+            window.getSignedUrlForFile(medico.assinatura_url).then(url => {
+              if (url) document.getElementById("perfil-assinatura-img").src = url;
+            });
+          } else {
+            document.getElementById("perfil-assinatura-img").src = medico.assinatura_url;
+          }
+          document.getElementById("perfil-assinatura-preview-container").classList.remove("hidden");
+          document.getElementById("perfil-assinatura-canvas-container").classList.add("hidden");
+        } else {
+          // Exibir canvas
+          document.getElementById("perfil-assinatura-preview-container").classList.add("hidden");
+          document.getElementById("perfil-assinatura-canvas-container").classList.remove("hidden");
+          
+          initCanvasSignaturePerfil();
+        }
+      } catch (e) {
+        console.error('[Perfil] Erro ao abrir modal:', e);
+        if (window.showToast) window.showToast("Erro ao abrir perfil: " + e.message, "error");
+        else alert("Erro: " + e.message);
+      }
+    };
+
+    window.fecharModalPerfil = function() {
+      document.getElementById("modalPerfil").classList.add("hidden");
+    };
+
+    window.ativarEdicaoAssinatura = function() {
+      document.getElementById("perfil-assinatura-preview-container").classList.add("hidden");
+      document.getElementById("perfil-assinatura-canvas-container").classList.remove("hidden");
+      
+      initCanvasSignaturePerfil();
+    };
+
+    function initCanvasSignaturePerfil() {
+      if (!canvasAssinaturaPerfilInstance && window.CanvasSignature) {
+        canvasAssinaturaPerfilInstance = new CanvasSignature(
+          'canvasAssinaturaPerfil',
+          'canvas-perfil-wrapper',
+          'perfil-btn-limpar',
+          'perfil-meta-time',
+          'perfil-meta-ip',
+          'Assine aqui com o stylus ou mouse'
+        );
+      }
+    }
+
+    function verificarPerfilCompleto(medico) {
+      if (!medico) return false;
+      if (!medico.nome_completo || !medico.nome || !medico.assinatura_url) return false;
+      if (!medico.especialidade) return false;
+      if (medico.tipo_clinica !== 'cicatrize') {
+        if (!medico.crm || !medico.uf_crm) return false;
+      }
+      return true;
+    }
+
+    function highlightInputError(inputEl, isError) {
+      if (!inputEl) return;
+      if (isError) {
+        inputEl.classList.remove("border-slate-200", "focus:border-emerald-500", "focus:ring-emerald-100");
+        inputEl.classList.add("border-rose-400", "focus:border-rose-500", "focus:ring-rose-100");
+      } else {
+        inputEl.classList.add("border-slate-200", "focus:border-emerald-500", "focus:ring-emerald-100");
+        inputEl.classList.remove("border-rose-400", "focus:border-rose-500", "focus:ring-rose-100");
+      }
+    }
+
+    // Limpar erros ao digitar/mudar
+    document.addEventListener("DOMContentLoaded", () => {
+      const inputs = [
+        "perfil-nome-completo",
+        "perfil-nome",
+        "perfil-especialidade",
+        "perfil-crm",
+        "perfil-uf"
+      ];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const handler = () => highlightInputError(el, false);
+          el.addEventListener("input", handler);
+          el.addEventListener("change", handler);
+        }
+      });
+    });
+
+    window.salvarPerfilMedico = async function() {
+      const btn = document.getElementById("perfil-btn-salvar");
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin text-sm"></i> Salvando...';
+      btn.disabled = true;
+
+      try {
+        const nomeCompletoEl = document.getElementById("perfil-nome-completo");
+        const nomeEl = document.getElementById("perfil-nome");
+        const especialidadeEl = document.getElementById("perfil-especialidade");
+        const crmEl = document.getElementById("perfil-crm");
+        const ufEl = document.getElementById("perfil-uf");
+        const wrapperCanvas = document.getElementById("canvas-perfil-wrapper");
+
+        const nomeCompleto = nomeCompletoEl.value.trim();
+        const nome = nomeEl.value.trim();
+        const especialidade = especialidadeEl.value.trim();
+        const crm = crmEl.value.trim();
+        const uf_crm = ufEl.value;
+
+        const isCicatrize = medicoAtivo && medicoAtivo.tipo_clinica === 'cicatrize';
+
+        let hasError = false;
+
+        if (!nomeCompleto) { highlightInputError(nomeCompletoEl, true); hasError = true; }
+        if (!nome) { highlightInputError(nomeEl, true); hasError = true; }
+        if (!especialidade) { highlightInputError(especialidadeEl, true); hasError = true; }
+
+        if (!isCicatrize) {
+          if (!crm) { highlightInputError(crmEl, true); hasError = true; }
+          if (!uf_crm) { highlightInputError(ufEl, true); hasError = true; }
+        }
+
+        let assinaturaUrl = medicoAtivo.assinatura_url || null;
+        const canvasContainerVisible = !document.getElementById("perfil-assinatura-canvas-container").classList.contains("hidden");
+
+        if (canvasContainerVisible) {
+          if (!canvasAssinaturaPerfilInstance || canvasAssinaturaPerfilInstance.isEmpty()) {
+            if (wrapperCanvas) {
+              wrapperCanvas.classList.add("border-rose-400");
+              const handler = () => wrapperCanvas.classList.remove("border-rose-400");
+              wrapperCanvas.addEventListener("pointerdown", handler);
+            }
+            hasError = true;
+          }
+        } else {
+          if (!assinaturaUrl) {
+            hasError = true;
+          }
+        }
+
+        if (hasError) {
+          throw new Error("Por favor, preencha todos os campos obrigatórios em vermelho e assine.");
+        }
+
+        // Upload de nova assinatura
+        if (canvasContainerVisible && canvasAssinaturaPerfilInstance && !canvasAssinaturaPerfilInstance.isEmpty()) {
+          const base64 = canvasAssinaturaPerfilInstance.toPNG();
+          if (base64) {
+            const cleanBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
+            const binary = atob(cleanBase64);
+            const array = [];
+            for (let i = 0; i < binary.length; i++) {
+              array.push(binary.charCodeAt(i));
+            }
+            const blob = new Blob([new Uint8Array(array)], { type: 'image/png' });
+            const fileName = `${medicoAtivo.id}_assinatura.png`;
+
+            // Fazer upload no storage do Supabase
+            if (window.supabaseClient) {
+              const { error: uploadError } = await window.supabaseClient.storage
+                .from('prontuarios_pdf')
+                .upload(`assinaturas/${fileName}`, blob, {
+                  contentType: 'image/png',
+                  upsert: true
+                });
+
+              if (uploadError) throw uploadError;
+
+              const { data: publicUrlData } = window.supabaseClient.storage
+                .from('prontuarios_pdf')
+                .getPublicUrl(`assinaturas/${fileName}`);
+
+              if (publicUrlData && publicUrlData.publicUrl) {
+                // Injetar timestamp para evitar cache
+                assinaturaUrl = publicUrlData.publicUrl + "?t=" + Date.now();
+              }
+            } else {
+              throw new Error("Cliente Supabase não inicializado.");
+            }
+          }
+        }
+
+        // Atualizar perfil no banco de dados do Supabase
+        if (window.supabaseClient) {
+          const updateData = {
+            nome_completo: nomeCompleto,
+            nome: nome,
+            especialidade: especialidade,
+            crm: isCicatrize ? null : crm,
+            uf_crm: isCicatrize ? null : uf_crm,
+            assinatura_url: assinaturaUrl
+          };
+
+          const { error: updateError } = await window.supabaseClient
+            .from('medicos')
+            .update(updateData)
+            .eq('id', medicoAtivo.id);
+
+          if (updateError) throw updateError;
+
+          // Atualizar médico no localStorage
+          const novoMedicoAtivo = {
+            ...medicoAtivo,
+            ...updateData
+          };
+          localStorage.setItem("medico_ativo", JSON.stringify(novoMedicoAtivo));
+          medicoAtivo = novoMedicoAtivo;
+          
+          // Disparar evento para outras abas
+          window.dispatchEvent(new Event('storage'));
+
+          if (window.showToast) {
+            window.showToast("Perfil atualizado com sucesso!", "success");
+          } else {
+            alert("Perfil atualizado com sucesso!");
+          }
+
+          atualizarBannerPerfil();
+          fecharModalPerfil();
+        } else {
+          throw new Error("Cliente Supabase não inicializado.");
+        }
+      } catch (e) {
+        console.error('[Perfil] Erro ao salvar:', e);
+        if (window.showToast) {
+          window.showToast(e.message || "Erro ao salvar perfil.", "error");
+        } else {
+          alert(e.message || "Erro ao salvar perfil.");
+        }
+      } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+      }
+    };
+
+    function atualizarBannerPerfil() {
+      const banner = document.getElementById("banner-perfil-incompleto");
+      if (!banner) return;
+      const completo = verificarPerfilCompleto(medicoAtivo);
+      if (completo) {
+        banner.classList.add("hidden");
+      } else {
+        banner.classList.remove("hidden");
+      }
+    }
+
+    // Configura o comportamento de redirecionamento no atendimento.html
     window.atenderPaciente = function (id, nome, convenio) {
+      if (!verificarPerfilCompleto(medicoAtivo)) {
+        if (window.showToast) {
+          window.showToast("Perfil incompleto. Preencha seus dados e salve uma assinatura antes de iniciar o atendimento.", "warning");
+        } else {
+          alert("Perfil incompleto. Preencha seus dados e salve uma assinatura antes de iniciar o atendimento.");
+        }
+        abrirModalPerfil();
+        return;
+      }
       window.location.href = `atendimento.html?paciente=${encodeURIComponent(nome)}&id=${id}&convenio=${encodeURIComponent(convenio)}`;
     };
 
-    document.addEventListener("DOMContentLoaded", carregarPacientes);
+    // Sincronização em tempo real entre abas do dashboard
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'medico_ativo' || !e.key) {
+        const medico = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+        if (medico && medico.id) {
+          medicoAtivo = medico;
+          const navbarName = document.getElementById("navbar-doctor-name");
+          if (navbarName) navbarName.innerText = medicoAtivo.nome || "Dr(a). Medico";
+          atualizarBannerPerfil();
+        }
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      garantirMedicoId().then(() => {
+        atualizarBannerPerfil();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const openProfile = urlParams.get('openProfile') === 'true';
+        const incompleto = !verificarPerfilCompleto(medicoAtivo);
+
+        if (openProfile || incompleto) {
+          abrirModalPerfil();
+          if (openProfile && window.showToast) {
+            window.showToast("Por favor, preencha seu perfil e salve uma assinatura para continuar.", "warning");
+          }
+        }
+      });
+      carregarPacientes();
+    });
+
     setInterval(carregarPacientes, 45000);
   </script>
 </body>
 </html>
-

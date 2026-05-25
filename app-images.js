@@ -430,7 +430,7 @@ function renderizarGrid() {
 
     window.fotosConsulta.forEach(({ dataUrl, timestamp, descricao }, idx) => {
         const thumb = document.createElement('div');
-        thumb.className = 'foto-thumb group relative cursor-pointer rounded-xl overflow-hidden aspect-square border-2 border-transparent hover:border-indigo-400 transition-all shadow-sm';
+        thumb.className = 'foto-thumb group relative cursor-pointer rounded-xl overflow-hidden aspect-square border-2 border-transparent hover:border-emerald-400 transition-all shadow-sm';
         thumb.innerHTML = `
             <img src="${dataUrl}" alt="Foto ${idx + 1}" class="w-full h-full object-cover" />
             <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white px-1 py-0.5 pointer-events-none">

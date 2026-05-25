@@ -23,7 +23,7 @@
 
         var icon = 'ph-fill ph-check-circle text-emerald-500';
         if (type === 'error')   icon = 'ph-fill ph-warning-circle text-rose-500';
-        if (type === 'info')    icon = 'ph-fill ph-info text-indigo-500';
+        if (type === 'info')    icon = 'ph-fill ph-info text-sky-500';
         if (type === 'warning') icon = 'ph-fill ph-warning text-amber-500';
 
         toast.innerHTML =
