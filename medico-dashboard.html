@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dashboard Médico — prontuar.IO</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <meta name="description" content="Dashboard do Médico - prontuar.IO. Acompanhe a lista de pacientes, histórico de consultas e assine digitalmente." />
@@ -474,7 +474,7 @@
           <!-- Seção do Canvas para desenhar (Caso não tenha ou decida alterar) -->
           <div id="perfil-assinatura-canvas-container" class="space-y-2">
             <div id="canvas-perfil-wrapper" class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[5/2]">
-              <canvas id="canvasAssinaturaPerfil"></canvas>
+              <canvas id="canvasAssinaturaPerfil" style="touch-action:none;user-select:none;-webkit-user-select:none;"></canvas>
               <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-semibold select-none">
                 Assine aqui com o stylus ou mouse
               </div>

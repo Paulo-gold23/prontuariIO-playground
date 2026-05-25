@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Atendimento Médico - prontuar.IO</title>
     <meta name="description" content="Página de atendimento médico do prontuar.IO. Realize consultas, grave áudios e assine prontuários." />
     <meta property="og:title" content="Atendimento Médico - prontuar.IO" />
@@ -33,6 +33,57 @@
             --brand-primary: #10b981; /* emerald-500 */
             --brand-secondary: #0ea5e9;
         }
+
+        /* =======================================================
+           ASSINATURA STYLUS — CSS crítico (não remover)
+           Bloqueia scroll/zoom do browser sobre o canvas de
+           assinatura em qualquer dispositivo móvel.
+           ======================================================= */
+        #secaoAssinaturasStylus {
+            border-top: 1px solid #f1f5f9;
+            padding-top: 2rem;
+            margin-top: 2rem;
+        }
+        .canvas-wrap {
+            position: relative;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        .canvas-wrap:hover  { border-color: #cbd5e1; }
+        .canvas-wrap.active { border-color: #10b981; background: #ffffff; }
+        .canvas-wrap canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: crosshair;
+            touch-action: none;
+            z-index: 10;
+        }
+        .canvas-placeholder {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            font-weight: 600;
+            user-select: none;
+            z-index: 5;
+            transition: opacity 0.2s;
+        }
+        .canvas-wrap.has-signature .canvas-placeholder { opacity: 0; }
+        html.dark .canvas-wrap         { background: #f8fafc; border-color: #334155; }
+        html.dark .canvas-wrap:hover   { border-color: #475569; }
+        html.dark .canvas-wrap.active  { border-color: #10b981; background: #ffffff; }
+        html.dark .canvas-placeholder  { color: #94a3b8; }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -761,7 +812,7 @@
                                 </div>
 
                                 <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
-                                    <canvas id="canvasAssinaturaMedico"></canvas>
+                                    <canvas id="canvasAssinaturaMedico" style="touch-action:none;user-select:none;-webkit-user-select:none;"></canvas>
                                     <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
                                         Assine aqui (Responsável)
                                     </div>
@@ -790,7 +841,7 @@
                                     </button>
                                 </div>
                                 <div class="canvas-wrap relative bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden aspect-[4/2] sm:aspect-[5/2]">
-                                    <canvas id="canvasAssinaturaPaciente"></canvas>
+                                    <canvas id="canvasAssinaturaPaciente" style="touch-action:none;user-select:none;-webkit-user-select:none;"></canvas>
                                     <div class="canvas-placeholder pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold select-none">
                                         Assine aqui (Paciente)
                                     </div>
