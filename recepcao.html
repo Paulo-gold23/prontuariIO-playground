@@ -2579,13 +2579,27 @@
         async function confirmarAgendamentoEGerar() {
             if (!dadosCadastroTemporario) return;
             
-            // Lê de qualquer checkbox visível (desktop ou mobile)
-            const chkDesktop = document.getElementById('chk_termo_aceito_desktop');
-            const chkMobile = document.getElementById('chk_termo_aceito');
-            const termoAceito = (chkDesktop && chkDesktop.checked) || (chkMobile && chkMobile.checked);
+            // Lê o checkbox unificado (fonte da verdade) com fallback nos compat
+            const chkUnified  = document.getElementById('chk-termo-unified');
+            const chkDesktop  = document.getElementById('chk_termo_aceito_desktop');
+            const chkMobile   = document.getElementById('chk_termo_aceito');
+            const termoAceito = (chkUnified && chkUnified.checked)
+                             || (chkDesktop && chkDesktop.checked)
+                             || (chkMobile  && chkMobile.checked);
+
             if (!termoAceito) {
-                showCustomAlert("O aceite do Termo de Consentimento (físico ou digital) é obrigatório.", "Atenção");
+                showCustomAlert("O aceite do Termo de Consentimento é obrigatório.", "Atenção");
                 return;
+            }
+
+            // Valida assinatura digital (se modo digital estiver ativo)
+            const isDigital = window.currentConsentMode === 'digital';
+            if (isDigital) {
+                const sigPNG = window.signatureInstance ? window.signatureInstance.toPNG() : null;
+                if (!sigPNG) {
+                    showCustomAlert("Por favor, colha a assinatura digital do paciente antes de confirmar.", "Assinatura obrigatória");
+                    return;
+                }
             }
             
             const payloadAnamnese = {

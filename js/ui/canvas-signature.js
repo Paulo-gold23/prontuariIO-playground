@@ -39,7 +39,8 @@ class CanvasSignature {
        ═══════════════════════════════════════════ */
 
     get _isMobile() {
-        return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
+        // Usa modal fullscreen em mobile E tablet (até 1200px de largura)
+        return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 1200;
     }
 
     /* ═══════════════════════════════════════════
@@ -355,6 +356,20 @@ class CanvasSignature {
                 this.wrapper?.classList.add('has-signature');
                 this.updateTimestamp();
                 this._renderPreview();
+
+                // Dispara callbacks de sincronização globais (recepcao.html)
+                // para que checkCanEfetivar() habilite o botão de efetivar
+                setTimeout(() => {
+                    if (typeof window.checkCanEfetivar === 'function') {
+                        window.checkCanEfetivar();
+                    }
+                    // Atualiza preview de imagem da assinatura se existir
+                    const imgPreview = document.getElementById('assinatura-paciente-img');
+                    if (imgPreview) {
+                        imgPreview.src = this._signatureDataUrl;
+                        imgPreview.style.display = 'block';
+                    }
+                }, 80);
             }
             this._modalOpen = false;
             document.body.style.overflow = prevOverflow;
