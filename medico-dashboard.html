@@ -89,53 +89,24 @@
   <nav class="glass-card sticky top-0 z-[50] px-3 sm:px-6 lg:px-12 py-2.5 sm:py-0 sm:h-20 premium-shadow">
     <div class="max-w-[1440px] mx-auto w-full flex justify-between items-center h-full relative">
       
-      <!-- Hamburger Button (Mobile Only) -->
-      <button onclick="toggleMobileSidebar(true)" class="sm:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Abrir Menu">
+      <!-- Hamburger Button (All Devices) -->
+      <button onclick="toggleMobileSidebar(true)" class="p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Abrir Menu">
         <i class="ph-bold ph-list text-2xl"></i>
       </button>
 
-      <!-- Logo (Centered on mobile, Left on desktop) -->
-      <div class="flex items-center gap-2 sm:gap-4 shrink-0 absolute left-1/2 -translate-x-1/2 sm:static sm:left-auto sm:translate-x-0">
+      <!-- Logo (Always Centered) -->
+      <div class="flex items-center gap-2 sm:gap-4 shrink-0 absolute left-1/2 -translate-x-1/2">
         <div class="w-9 h-9 sm:w-12 sm:h-12 bg-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
           <i class="ph-bold ph-stethoscope text-lg sm:text-2xl"></i>
         </div>
         <div>
-          <h1 class="font-extrabold text-sm sm:text-xl text-slate-900 tracking-tight leading-tight">
-            <span class="sm:hidden">Med</span>
-            <span class="hidden sm:inline">MedDashboard</span>
-          </h1>
-          <p class="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-emerald-600">Workspace</p>
+          <h1 class="font-extrabold text-sm sm:text-xl text-slate-900 dark:text-white tracking-tight leading-tight">prontuar.IO</h1>
+          <p class="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-emerald-600">Área Médica</p>
         </div>
       </div>
 
-      <!-- Spacer for centering on mobile -->
-      <div class="w-10 h-10 sm:hidden"></div>
-
-      <!-- Right side (Desktop Menu) -->
-      <div class="hidden sm:flex items-center gap-1.5 sm:gap-4 lg:gap-6">
-        <div class="hidden lg:flex flex-col items-end">
-          <span class="text-sm font-bold text-slate-900" id="navbar-doctor-name">Dr. Carregando...</span>
-          <span class="text-[10px] text-slate-500 font-medium">CRM Ativo • Online</span>
-        </div>
-        
-        <button onclick="abrirModalPerfil()" class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 text-white font-bold rounded-lg sm:rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-[10px] sm:text-sm" title="Meu Perfil">
-          <i class="ph-bold ph-user-circle text-sm sm:text-lg"></i>
-          <span>Meu Perfil</span>
-        </button>
-        <a class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-900 text-white font-bold rounded-lg sm:rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 text-[10px] sm:text-sm" href="recepcao.html" title="Ir para Recepção">
-          <i class="ph-bold ph-users text-sm sm:text-lg"></i>
-          <span>Recepção</span>
-        </a>
-        <button id="theme-toggle" class="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all text-[10px] sm:text-sm font-bold">
-          <i class="ph-bold ph-moon-stars text-sm sm:text-xl"></i>
-          <span class="sm:hidden">Tema</span>
-        </button>
-        <button onclick="logoutMedico()" class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 bg-rose-50 text-rose-600 font-bold rounded-lg sm:rounded-xl hover:bg-rose-100 transition-all text-[10px] sm:text-sm group">
-          <span class="sm:hidden">Sair</span>
-          <span class="hidden sm:inline">Encerrar Sessão</span>
-          <i class="ph-bold ph-sign-out text-sm sm:text-lg transition-transform group-hover:translate-x-1"></i>
-        </button>
-      </div>
+      <!-- Spacer (Always shown for flex balance) -->
+      <div class="w-10 h-10"></div>
     </div>
   </nav>
 
@@ -143,7 +114,7 @@
   <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-[990] bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out"></div>
 
   <!-- Mobile Sidebar -->
-  <div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-[995] w-72 bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col sm:hidden">
+  <div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-[995] w-72 bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
     <!-- Top Bar -->
     <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
       <div class="flex items-center gap-3">

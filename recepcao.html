@@ -97,40 +97,24 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 relative">
                 
-                <!-- Hamburger Button (Mobile Only) -->
-                <button onclick="toggleMobileSidebar(true)" class="sm:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all self-center" title="Abrir Menu">
+                <!-- Hamburger Button (All Devices) -->
+                <button onclick="toggleMobileSidebar(true)" class="p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all self-center" title="Abrir Menu">
                     <i class="ph-bold ph-list text-2xl"></i>
                 </button>
 
-                <!-- Logo/Title (Centered on mobile, Left on desktop) -->
-                <div class="flex items-center gap-3 absolute left-1/2 -translate-x-1/2 h-full sm:static sm:left-auto sm:translate-x-0">
+                <!-- Logo (Always Centered) -->
+                <div class="flex items-center gap-3 absolute left-1/2 -translate-x-1/2 h-full">
                     <div class="p-1.5 bg-emerald-600 text-white rounded-lg">
                         <i class="ph-bold ph-heartbeat text-xl"></i>
                     </div>
                     <div>
-                        <span class="font-extrabold text-xl text-slate-800 dark:text-white hidden sm:inline">prontuar.IO</span>
-                        <span class="font-bold text-base text-slate-800 dark:text-white sm:hidden">Recepção</span>
-                        <p class="text-[8px] uppercase tracking-[0.15em] font-bold text-emerald-600 hidden sm:block">Recepção</p>
+                        <span class="font-extrabold text-xl text-slate-800 dark:text-white">prontuar.IO</span>
+                        <p class="text-[8px] uppercase tracking-[0.15em] font-bold text-emerald-600">Recepção</p>
                     </div>
                 </div>
 
-                <!-- Spacer for centering on mobile -->
-                <div class="w-10 h-10 sm:hidden"></div>
-
-                <!-- Desktop Menu -->
-                <div class="hidden sm:flex items-center gap-2 sm:gap-4">
-                    <a href="medico-dashboard.html"
-                        class="text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                        <i class="ph-bold ph-stethoscope text-base sm:text-lg"></i> <span>Área Médica</span>
-                    </a>
-                    <span class="hidden sm:inline text-sm font-medium text-slate-500">Olá, Equipe</span>
-                    <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
-                        title="Modo Noturno">
-                        <i class="ph-bold ph-moon text-xl"></i>
-                    </button>
-                    <button onclick="logoutSecretaria()"
-                        class="text-sm text-rose-500 hover:text-rose-700 font-medium">Sair</button>
-                </div>
+                <!-- Spacer for flex balance -->
+                <div class="w-10 h-10"></div>
 
             </div>
         </div>
@@ -139,8 +123,8 @@
     <!-- Mobile Sidebar Overlay -->
     <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-[990] bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out"></div>
 
-    <!-- Mobile Sidebar -->
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-[995] w-72 bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col sm:hidden">
+    <!-- Sidebar (All Devices) -->
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-[995] w-72 bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
         <!-- Top Bar -->
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
             <div class="flex items-center gap-3">
