@@ -17,10 +17,10 @@ console.log('[app-images.js] v2.0 — Modal câmera prontuar.IO carregado.');
 // CONFIGURAÇÃO
 // ──────────────────────────────────────────────────────────────────────────────
 
-const IMG_SUPABASE_URL     = window.AppConfig?.SUPABASE_URL || 'https://bkkdexuzrjouafrwzdsw.supabase.co';
-const IMG_SUPABASE_ANON   = window.AppConfig?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJra2RleHV6cmpvdWFmcnd6ZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzMwOTUsImV4cCI6MjA4NTYwOTA5NX0.yxnTQ9CuQKcOrY4aPoWCUpJxFwusHHwHV2fVc5jzVkI';
-const IMG_BUCKET           = window.AppConfig?.BUCKETS?.ANEXOS_IMAGENS || 'anexos_imagens';
-const IMG_WEBHOOK          = window.AppConfig?.WEBHOOK_BASE_URL || 'https://n8n.srv1181762.hstgr.cloud/webhook';
+const IMG_SUPABASE_URL     = 'https://bkkdexuzrjouafrwzdsw.supabase.co';
+const IMG_SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJra2RleHV6cmpvdWFmcnd6ZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzMwOTUsImV4cCI6MjA4NTYwOTA5NX0.yxnTQ9CuQKcOrY4aPoWCUpJxFwusHHwHV2fVc5jzVkI';
+const IMG_BUCKET           = 'anexos_imagens';
+const IMG_WEBHOOK          = 'https://n8n.srv1181762.hstgr.cloud/webhook';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // ESTADO GLOBAL
@@ -463,9 +463,20 @@ window.removerFoto = function (idx) {
 function showImageToast(msg, type = 'success') {
     if (typeof window.showToast === 'function') {
         window.showToast(msg, type === 'warn' ? 'info' : type);
-    } else {
-        console.warn('[app-images] window.showToast não disponível:', msg);
+        return;
     }
+    const t = document.createElement('div');
+    t.style.cssText = `
+        position:fixed;top:24px;right:24px;z-index:99999;
+        background:white;border-radius:14px;padding:14px 20px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.12);border:1px solid #f1f5f9;
+        font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#1e293b;
+        display:flex;align-items:center;gap:10px;
+        animation:slideInR 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    `;
+    t.innerHTML = `<span>${msg}</span>`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='0.3s'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -495,21 +506,23 @@ async function uploadParaStorage(file, pacienteId, consultaId, idx) {
     }
 
     // Fallback: fetch REST com token da sessão
-    const headers = {
-        'Content-Type': file.type || 'image/jpeg',
-        'x-upsert': 'true',
-    };
-    if (typeof window.getAuthHeaders === 'function') {
-        Object.assign(headers, await window.getAuthHeaders());
-    }
-    if (!headers['Authorization']) {
-        headers['Authorization'] = `Bearer ${IMG_SUPABASE_ANON}`;
-    }
+    let authToken = IMG_SUPABASE_ANON;
+    try {
+        const sessionStr = localStorage.getItem('prontuar_session');
+        if (sessionStr) {
+            const session = JSON.parse(sessionStr);
+            if (session?.access_token) authToken = session.access_token;
+        }
+    } catch (e) { /* usa anon */ }
 
     const uploadUrl = `${IMG_SUPABASE_URL}/storage/v1/object/${IMG_BUCKET}/${storagePath}`;
     const res = await fetch(uploadUrl, {
         method: 'POST',
-        headers: headers,
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': file.type || 'image/jpeg',
+            'x-upsert': 'true',
+        },
         body: file,
     });
 
@@ -918,21 +931,16 @@ window.salvarRelatorioImagensNoStorage = async function (consultaId, _pacienteId
     }
 
     // Fallback: fetch REST com token da sessão
-    const uploadHeaders = {
-        'Content-Type': 'application/pdf',
-        'x-upsert': 'true'
-    };
-    if (typeof window.getAuthHeaders === 'function') {
-        Object.assign(uploadHeaders, await window.getAuthHeaders());
-    }
-    if (!uploadHeaders['Authorization']) {
-        uploadHeaders['Authorization'] = `Bearer ${IMG_SUPABASE_ANON}`;
-    }
+    let authToken = IMG_SUPABASE_ANON;
+    try {
+        const session = JSON.parse(localStorage.getItem('prontuar_session') || '{}');
+        if (session?.access_token) authToken = session.access_token;
+    } catch (e) { /* usa anon */ }
 
     const uploadUrl = `${IMG_SUPABASE_URL}/storage/v1/object/prontuarios_pdf/${storagePath}`;
     const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
-        headers: uploadHeaders,
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
         body: blob,
     });
     if (!uploadRes.ok) {
@@ -941,21 +949,12 @@ window.salvarRelatorioImagensNoStorage = async function (consultaId, _pacienteId
     }
 
     // Salva path relativo na coluna
-    const patchHeaders = {
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal',
-        'apikey': IMG_SUPABASE_ANON
-    };
-    if (typeof window.getAuthHeaders === 'function') {
-        Object.assign(patchHeaders, await window.getAuthHeaders());
-    }
-    if (!patchHeaders['Authorization']) {
-        patchHeaders['Authorization'] = `Bearer ${IMG_SUPABASE_ANON}`;
-    }
-
     await fetch(`${IMG_SUPABASE_URL}/rest/v1/consultas?id=eq.${consultaId}`, {
         method: 'PATCH',
-        headers: patchHeaders,
+        headers: {
+            'Authorization': `Bearer ${authToken}`, 'apikey': IMG_SUPABASE_ANON,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+        },
         body: JSON.stringify({ anexo_imagens_url: storagePath, updated_at: new Date().toISOString() }),
     }).catch(e => console.warn('[app-images] PATCH consultas:', e));
 

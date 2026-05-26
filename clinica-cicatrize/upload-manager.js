@@ -6,7 +6,7 @@
  */
 
 const UploadManager = (() => {
-  const BUCKET = window.AppConfig?.BUCKETS?.ANEXOS_IMAGENS || 'anexos_imagens';
+  const BUCKET = 'anexos_imagens';
   const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
   const TIPOS_ACEITOS = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
   const EXTENSOES_ACEITAS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.pdf'];
@@ -200,15 +200,65 @@ const UploadManager = (() => {
    * @param {number} duracao — ms (0 = permanente até dismiss manual)
    * @returns {HTMLElement} o toast (para remover programaticamente)
    */
-  /**
-   * Exibe um toast de feedback delegando para o sistema central window.showToast
-   */
   function _showToast(tipo, mensagem, duracao = 4000) {
-    if (typeof window.showToast === 'function') {
-      return window.showToast(mensagem, tipo, duracao);
+    // Remover toast anterior se existir
+    document.querySelectorAll('.upload-toast').forEach(t => t.remove());
+
+    const cores = {
+      success: 'bg-emerald-600 text-white shadow-emerald-200',
+      error:   'bg-rose-600 text-white shadow-rose-200',
+      loading: 'bg-slate-800 text-white shadow-slate-300'
+    };
+    const icones = {
+      success: 'ph-check-circle',
+      error:   'ph-x-circle',
+      loading: 'ph-spinner animate-spin'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `upload-toast fixed z-[2000] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl
+      text-sm font-bold transition-all duration-300 opacity-0 translate-y-2
+      ${cores[tipo]}`;
+
+    // Posicionar dentro do modal de imagens (relativo à viewport mas acima do modal)
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      z-index: 2000;
+      max-width: calc(100vw - 32px);
+      white-space: nowrap;
+    `;
+
+    toast.innerHTML = `
+      <i class="ph-bold ${icones[tipo]} text-lg shrink-0"></i>
+      <span>${mensagem}</span>
+      ${tipo !== 'loading' ? `<button onclick="this.closest('.upload-toast').remove()" class="ml-1 opacity-70 hover:opacity-100 transition-opacity">
+        <i class="ph-bold ph-x text-sm"></i>
+      </button>` : ''}
+    `;
+
+    document.body.appendChild(toast);
+
+    // Animar entrada
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+      });
+    });
+
+    // Auto-remover
+    if (duracao > 0) {
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(8px)';
+        setTimeout(() => toast.remove(), 300);
+      }, duracao);
     }
-    console.log(`[UploadManager Toast] ${tipo}: ${mensagem}`);
-    return null;
+
+    return toast;
   }
 
   /**

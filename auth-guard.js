@@ -1,7 +1,7 @@
 
-// Configurações do Supabase (Consumidas do AppConfig com fallback)
-const SUPABASE_URL = window.AppConfig?.SUPABASE_URL || 'https://bkkdexuzrjouafrwzdsw.supabase.co';
-const SUPABASE_ANON_KEY = window.AppConfig?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJra2RleHV6cmpvdWFmcnd6ZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzMwOTUsImV4cCI6MjA4NTYwOTA5NX0.yxnTQ9CuQKcOrY4aPoWCUpJxFwusHHwHV2fVc5jzVkI';
+// Configurações do Supabase
+const SUPABASE_URL = 'https://bkkdexuzrjouafrwzdsw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJra2RleHV6cmpvdWFmcnd6ZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzMwOTUsImV4cCI6MjA4NTYwOTA5NX0.yxnTQ9CuQKcOrY4aPoWCUpJxFwusHHwHV2fVc5jzVkI';
 
 // ===========================================================
 // Inicializa o cliente Supabase COM PROTEÇÃO contra CDN offline

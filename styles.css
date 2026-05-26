@@ -1,0 +1,121 @@
+
+
+/* =======================================================
+   SECAO DE ASSINATURA STYLUS
+   ======================================================= */
+#secaoAssinaturasStylus {
+    border-top: 1px solid #f1f5f9;
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+.canvas-wrap {
+    position: relative;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.canvas-wrap:hover {
+    border-color: #cbd5e1;
+}
+
+.canvas-wrap.active {
+    border-color: #10b981;
+    background: #ffffff;
+}
+
+.canvas-wrap canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+    z-index: 10;
+}
+
+.canvas-placeholder {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    font-weight: 600;
+    user-select: none;
+    z-index: 5;
+    transition: opacity 0.2s;
+}
+
+.canvas-wrap.has-signature .canvas-placeholder {
+    opacity: 0;
+}
+
+/* Dark mode overrides via html.dark class */
+html.dark #secaoAssinaturasStylus {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+html.dark .canvas-wrap {
+    background: #f8fafc;
+    border-color: #334155;
+}
+
+html.dark .canvas-wrap:hover {
+    border-color: #475569;
+}
+
+html.dark .canvas-wrap.active {
+    border-color: #10b981;
+    background: #ffffff;
+}
+
+html.dark .canvas-placeholder {
+    color: #94a3b8;
+}
+
+/* =======================================================
+   TOAST NOTIFICATIONS
+   ======================================================= */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.toast {
+    min-width: 300px;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #f1f5f9;
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

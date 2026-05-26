@@ -15,7 +15,6 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Supabase SDK e Auth Guard -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/config.js"></script>
     <script src="auth-guard.js"></script>
     <script src="dark-mode.js"></script>
     <script src="js/ui/canvas-signature.js"></script>
@@ -327,7 +326,7 @@
                         <div class="relative flex-1">
                           <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                           <input id="searchPacienteRecepcao" type="text" placeholder="Buscar por nome ou convênio..."
-                            class="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:bg-white transition-all"
+                            class="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:bg-white transition-all"
                             oninput="filtrarLista()">
                           <button id="searchClearRecepcao" onclick="limparBusca()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-200 hover:bg-slate-300 rounded-full flex items-center justify-center transition-all">
                             <i class="ph-bold ph-x text-[10px] text-slate-600"></i>
@@ -595,19 +594,19 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Cirurgias Anteriores / Internações</label>
-                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Cirurgias recentes, reações anestésicas, internações..."></textarea>
+                            <textarea id="txt_cirurgias" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Cirurgias recentes, reações anestésicas, internações..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Condições de Pele Prévias</label>
-                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Psoríase, dermatite, vitiligo, melasma, rosácea..."></textarea>
+                            <textarea id="txt_pele" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Psoríase, dermatite, vitiligo, melasma, rosácea..."></textarea>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Histórico Familiar Relevante</label>
-                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças autoimunes, queloides...">
+                            <input type="text" id="txt_historico_familiar" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Câncer de pele na família, doenças autoimunes, queloides...">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Observações Adicionais</label>
-                            <textarea id="txt_observacoes" rows="2" class="w-full px-3 py-2 text-base sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Qualquer informação relevante não coberta acima..."></textarea>
+                            <textarea id="txt_observacoes" rows="2" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400" placeholder="Qualquer informação relevante não coberta acima..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -650,166 +649,199 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════
+         Modal Termo de Consentimento — Redesign mobile-first
+         Estrutura: Header fixo → Tabs (Ler|Assinar) → Conteúdo → Footer
+         ═══════════════════════════════════════════════════════ -->
+    <style>
+        /* ── Tab switcher ── */
+        #termo-tab-bar { display: flex; }
+        .termo-tab {
+            flex: 1; padding: 10px 8px; font-size: 13px; font-weight: 700;
+            border: none; background: transparent; cursor: pointer;
+            color: #94a3b8; border-bottom: 2px solid transparent;
+            transition: color .2s, border-color .2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .termo-tab.active { color: #059669; border-bottom-color: #059669; }
+        .termo-tab-panel { display: none; flex: 1; overflow-y: auto; }
+        .termo-tab-panel.active { display: flex; flex-direction: column; }
+
+        /* ── Modo digital selecionado ── */
+        .sig-opt-btn { flex:1; padding: 10px 8px; border-radius: 12px; font-size: 12px;
+            font-weight: 700; border: 1.5px solid #e2e8f0; background: #fff;
+            color: #64748b; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 6px; transition: all .2s;
+            -webkit-tap-highlight-color: transparent; }
+        .sig-opt-btn.selected { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+
+        /* ── Canvas zone ── */
+        #canvas-assinatura-wrap { border-radius: 16px; overflow: hidden; }
+
+        /* ── Toggle unificado ── */
+        #chk-termo-unified { display: none; }
+        #lbl-termo-unified {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; background: #f0fdf4;
+            border: 2px solid #86efac; border-radius: 16px;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            transition: background .2s, border-color .2s;
+        }
+        #lbl-termo-unified.checked { background: #dcfce7; border-color: #4ade80; }
+        #lbl-termo-unified .tgl-pill {
+            position: relative; display: inline-flex; align-items: center;
+            width: 52px; height: 28px; border-radius: 9999px;
+            background: #cbd5e1; transition: background .25s; flex-shrink: 0;
+        }
+        #lbl-termo-unified .tgl-knob {
+            position: absolute; left: 3px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform .25s;
+        }
+        #lbl-termo-unified.checked .tgl-pill { background: #10b981; }
+        #lbl-termo-unified.checked .tgl-knob { transform: translateX(24px); }
+
+        /* ── Btn efetivar ── */
+        #btn-efetivar-unified {
+            width: 100%; padding: 16px; font-size: 16px; font-weight: 700;
+            color: white; background: #cbd5e1; border: none; border-radius: 16px;
+            cursor: not-allowed; display: flex; align-items: center; justify-content: center;
+            gap: 8px; transition: background .2s, box-shadow .2s;
+            -webkit-tap-highlight-color: transparent; min-height: 54px;
+        }
+        #btn-efetivar-unified.can-submit {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 8px 20px rgba(16,185,129,0.35);
+            cursor: pointer;
+        }
+    </style>
+
     <!-- Modal Termo de Consentimento Gerado -->
-    <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-end sm:items-center justify-center" style="padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);">
+    <div id="modalTermoConsentimento" class="hidden fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
         <div class="fixed inset-0 bg-slate-800/40 backdrop-blur-sm" onclick="fecharModalTermo()"></div>
-        <div class="relative w-full sm:max-w-3xl bg-white dark:bg-slate-900 sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col" style="max-height: 92dvh; max-height: 92vh;">
+        <div class="relative w-full sm:max-w-3xl bg-white dark:bg-slate-900 sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col" style="max-height: 95dvh; max-height: 95vh;">
             
-            <!-- Header fixo -->
-            <div class="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 flex-shrink-0 rounded-t-2xl">
+            <!-- ── Header ── -->
+            <div class="px-4 sm:px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 flex-shrink-0 rounded-t-2xl">
                 <div class="flex items-center gap-3">
-                    <h3 class="text-base sm:text-xl font-bold border-l-4 border-emerald-500 pl-3 text-slate-800 dark:text-slate-100 leading-tight">Termo de Consentimento</h3>
-                    <!-- STEPPER A: indica que este é o passo 2 (último) do fluxo de cadastro -->
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex-shrink-0">
-                        <i class="ph-bold ph-check-circle text-emerald-500"></i> Passo 2 de 2
-                    </span>
+                    <div class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <i class="ph-bold ph-file-text text-emerald-600 text-base"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">Passo 2 de 2</p>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">Termo de Consentimento</h3>
+                    </div>
                 </div>
-                <button type="button" onclick="fecharModalTermo()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors flex-shrink-0 ml-2" aria-label="Fechar">
+                <button type="button" onclick="fecharModalTermo()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex-shrink-0" aria-label="Fechar">
                     <i class="ph-bold ph-x text-lg"></i>
                 </button>
             </div>
+
+            <!-- ── Tab Bar (visível apenas no mobile) ── -->
+            <div id="termo-tab-bar" class="sm:hidden flex-shrink-0 border-b border-slate-100 bg-white dark:bg-slate-900">
+                <button class="termo-tab active" id="tab-ler" onclick="termoSetTab('ler')">
+                    <i class="ph-bold ph-file-text"></i> Ler Termo
+                </button>
+                <button class="termo-tab" id="tab-assinar" onclick="termoSetTab('assinar')">
+                    <i class="ph-bold ph-pen-nib"></i> Assinar
+                </button>
+            </div>
             
-            <!-- Área de scroll do documento -->
+            <!-- ══════════════════════════════════════════════════
+                 LAYOUT DESKTOP: duas colunas side-by-side
+                 LAYOUT MOBILE: duas abas empilhadas
+                 ══════════════════════════════════════════════════ -->
+            <div class="flex-1 overflow-hidden flex flex-col sm:flex-row min-h-0">
+
+            <!-- ── ABA / PAINEL 1: Documento ── -->
+            <div id="panel-ler" class="termo-tab-panel active sm:flex sm:flex-col flex-1 min-h-0 sm:border-r sm:border-slate-100">
             <div id="termo-imprimir" class="p-5 sm:p-8 overflow-y-auto custom-scrollbar bg-white font-serif text-slate-800 text-sm leading-relaxed flex-1" style="-webkit-overflow-scrolling: touch;">
-                <div class="text-center mb-6">
-                    <h2 class="text-xl sm:text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
-                    <h3 class="font-bold mt-2 uppercase text-slate-700 text-sm">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
-                </div>
-                
-                <p class="mb-4 text-justify">
-                    Eu, paciente em fase de admissão na <strong>Clínica Cicatrize</strong>, declaro para os devidos fins que fui esclarecido(a) de forma clara e objetiva sobre a natureza dos procedimentos estéticos, dermatológicos ou cirúrgicos a serem realizados.
-                </p>
-                <p class="mb-4 text-justify">
-                    <strong>1. ESCLARECIMENTOS GERAIS:</strong> Compreendo que a medicina não é uma ciência exata e que, apesar de toda técnica, empenho e diligência profissional, resultados exatos não podem ser garantidos. Riscos inerentes, infecções, assimetrias temporárias e processos de cicatrização variam de indivíduo para indivíduo.
-                </p>
-                <p class="mb-4 text-justify">
-                    <strong>2. VERACIDADE DAS INFORMAÇÕES:</strong> Declaro que todas as informações prestadas no Questionário de Saúde Pré-Clínico (Anamnese) são verdadeiras, não omitindo nenhum detalhe sobre alergias, uso de medicamentos, condições crônicas, cirurgias ou histórico de saúde. Entendo que a omissão pode resultar em complicações severas.
-                </p>
-                <p class="mb-4 text-justify">
-                    <strong>3. REGISTRO FOTOGRÁFICO:</strong> Autorizo o registro fotográfico (antes, durante e depois) de forma estritamente confidencial para fins de prontuário médico e acompanhamento da evolução clínica. Estas imagens não serão veiculadas publicamente sem meu consentimento adicional por escrito.
-                </p>
-                <p class="mb-4 text-justify">
-                    <strong>4. DEVERES DO PACIENTE:</strong> Comprometo-me a seguir rigorosamente todas as prescrições médicas, recomendações pré e pós-procedimento, e a comparecer aos retornos agendados, isentando a Clínica Cicatrize e seus profissionais de responsabilidade em caso de negligência de minha parte.
-                </p>
-                               <div id="bloco-assinatura-termo" style="margin-top: 48px; padding-top: 0;">
-                    <div style="display: flex; gap: 32px; align-items: flex-end;">
-                        <!-- Lado do Paciente -->
-                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                            <p id="assinatura-nome-paciente" style="font-size: 11px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0; text-align: center;">&nbsp;</p>
-                            <div id="assinatura-paciente-container" style="height: 70px; display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 4px;">
-                                <img id="assinatura-paciente-img"
-                                     alt="Assinatura do Paciente"
-                                     style="display: none; max-height: 70px; max-width: 100%; width: auto; object-fit: contain;"
-                                     onerror="this.style.display='none';"
-                                 />
-                            </div>
-                            <div style="border-bottom: 1.5px solid #334155; width: 100%; margin-bottom: 4px;"></div>
-                            <p style="font-size: 10px; color: #64748b; text-align: center; margin: 0;">Assinatura do(a) Paciente</p>
-                        </div>
-                        <!-- Lado do Médico -->
-                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                            <p id="assinatura-nome-medico" style="font-size: 11px; font-weight: 700; color: #1e293b; margin: 0 0 2px 0; text-align: center;">Responsável Técnico</p>
-                            <p id="assinatura-crm-medico" style="font-size: 9px; color: #64748b; margin: 0 0 4px 0; text-align: center;">&nbsp;</p>
-                            <div id="assinatura-medico-container" style="height: 70px; display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 4px;">
-                                <img id="assinatura-medico-img"
-                                     alt="Assinatura do Médico"
-                                     style="display: none; max-height: 70px; max-width: 100%; width: auto; object-fit: contain;"
-                                     onerror="this.style.display='none';"
-                                 />
-                            </div>
-                            <div style="border-bottom: 1.5px solid #334155; width: 100%; margin-bottom: 4px;"></div>
-                            <p style="font-size: 10px; color: #64748b; text-align: center; margin: 0;">Responsável / Clínica</p>
-                        </div>
+                    <div class="text-center mb-6">
+                        <h2 class="text-xl sm:text-2xl font-bold uppercase tracking-widest text-slate-900">Clínica Cicatrize</h2>
+                        <h3 class="font-bold mt-2 uppercase text-slate-700 text-sm">TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO (TCLE)</h3>
                     </div>
-                    <p id="assinatura-data-hora" style="margin-top: 12px; font-size: 10px; color: #64748b; text-align: right;">&nbsp;</p>
+                    <p class="mb-4 text-justify">
+                        Eu, paciente em fase de admissão na <strong>Clínica Cicatrize</strong>, declaro para os devidos fins que fui esclarecido(a) de forma clara e objetiva sobre a natureza dos procedimentos estéticos, dermatológicos ou cirúrgicos a serem realizados.
+                    </p>
+                    <p class="mb-4 text-justify">
+                        <strong>1. ESCLARECIMENTOS GERAIS:</strong> Compreendo que a medicina não é uma ciência exata e que, apesar de toda técnica, empenho e diligência profissional, resultados exatos não podem ser garantidos. Riscos inerentes, infecções, assimetrias temporárias e processos de cicatrização variam de indivíduo para indivíduo.
+                    </p>
+                    <p class="mb-4 text-justify">
+                        <strong>2. VERACIDADE DAS INFORMAÇÕES:</strong> Declaro que todas as informações prestadas no Questionário de Saúde Pré-Clínico (Anamnese) são verdadeiras, não omitindo nenhum detalhe sobre alergias, uso de medicamentos, condições crônicas, cirurgias ou histórico de saúde. Entendo que a omissão pode resultar em complicações severas.
+                    </p>
+                    <p class="mb-4 text-justify">
+                        <strong>3. REGISTRO FOTOGRÁFICO:</strong> Autorizo o registro fotográfico (antes, durante e depois) de forma estritamente confidencial para fins de prontuário médico e acompanhamento da evolução clínica. Estas imagens não serão veiculadas publicamente sem meu consentimento adicional por escrito.
+                    </p>
+                    <p class="mb-4 text-justify">
+                        <strong>4. DEVERES DO PACIENTE:</strong> Comprometo-me a seguir rigorosamente todas as prescrições médicas, recomendações pré e pós-procedimento, e a comparecer aos retornos agendados, isentando a Clínica Cicatrize e seus profissionais de responsabilidade em caso de negligência de minha parte.
+                    </p>
+                    <div id="bloco-assinatura-termo" style="margin-top: 48px; padding-top: 0;">
+                        <div style="display: flex; gap: 32px; align-items: flex-end;">
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                <p id="assinatura-nome-paciente" style="font-size: 11px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0; text-align: center;">&nbsp;</p>
+                                <div id="assinatura-paciente-container" style="height: 70px; display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 4px;">
+                                    <img id="assinatura-paciente-img" alt="Assinatura do Paciente" style="display: none; max-height: 70px; max-width: 100%; width: auto; object-fit: contain;" onerror="this.style.display='none';"/>
+                                </div>
+                                <div style="border-bottom: 1.5px solid #334155; width: 100%; margin-bottom: 4px;"></div>
+                                <p style="font-size: 10px; color: #64748b; text-align: center; margin: 0;">Assinatura do(a) Paciente</p>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                <p id="assinatura-nome-medico" style="font-size: 11px; font-weight: 700; color: #1e293b; margin: 0 0 2px 0; text-align: center;">Responsável Técnico</p>
+                                <p id="assinatura-crm-medico" style="font-size: 9px; color: #64748b; margin: 0 0 4px 0; text-align: center;">&nbsp;</p>
+                                <div id="assinatura-medico-container" style="height: 70px; display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 4px;">
+                                    <img id="assinatura-medico-img" alt="Assinatura do Médico" style="display: none; max-height: 70px; max-width: 100%; width: auto; object-fit: contain;" onerror="this.style.display='none';"/>
+                                </div>
+                                <div style="border-bottom: 1.5px solid #334155; width: 100%; margin-bottom: 4px;"></div>
+                                <p style="font-size: 10px; color: #64748b; text-align: center; margin: 0;">Responsável / Clínica</p>
+                            </div>
+                        </div>
+                        <p id="assinatura-data-hora" style="margin-top: 12px; font-size: 10px; color: #64748b; text-align: right;">&nbsp;</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Painel de Assinatura do Paciente (Digital vs Física) -->
-            <div class="px-4 sm:px-6 py-4 bg-white border-t border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex-shrink-0">
-                <div class="flex flex-col gap-3">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Forma de Assinatura do Paciente</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button type="button" id="btn-opt-digital" onclick="setConsentMode('digital')" class="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
-                            <i class="ph-bold ph-pencil-line text-sm"></i> Assinatura Digital (Tela)
-                        </button>
-                        <button type="button" id="btn-opt-physical" onclick="setConsentMode('physical')" class="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-                            <i class="ph-bold ph-printer text-sm"></i> Imprimir em Branco (Física)
-                        </button>
+            <!-- ── ABA / PAINEL 2: Assinatura ── -->
+            <div id="panel-assinar" class="termo-tab-panel sm:flex sm:flex-col sm:w-72 sm:min-w-64 flex-shrink-0 bg-slate-50 dark:bg-slate-950 min-h-0">
+                <div class="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Forma de Assinatura</p>
+                        <div class="flex gap-2">
+                            <button type="button" id="btn-opt-digital" onclick="setConsentMode('digital')" class="sig-opt-btn selected">
+                                <i class="ph-bold ph-pencil-line"></i> Digital
+                            </button>
+                            <button type="button" id="btn-opt-physical" onclick="setConsentMode('physical')" class="sig-opt-btn">
+                                <i class="ph-bold ph-printer"></i> Imprimir
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Canvas Container -->
-                    <div id="canvas-assinatura-wrap" class="p-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Desenhe sua assinatura no espaço abaixo:</span>
-                            <button type="button" id="btn-limpar-canvas" class="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 font-bold flex items-center gap-1">
+                    <div id="canvas-assinatura-wrap" class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Assinatura do Paciente</p>
+                            <button type="button" id="btn-limpar-canvas" class="text-xs text-rose-500 font-bold flex items-center gap-1">
                                 <i class="ph ph-arrow-counter-clockwise"></i> Limpar
                             </button>
                         </div>
-                        <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-white overflow-hidden relative" style="height: 120px;">
-                            <canvas id="signature-canvas" class="w-full h-full cursor-crosshair touch-none" style="display: block; touch-action: none;"></canvas>
+                        <div id="sig-canvas-zone" class="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative" style="height: 130px;">
+                            <canvas id="signature-canvas" class="w-full h-full cursor-crosshair" style="display: block; touch-action: none;"></canvas>
+                            <div id="sig-tap-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none sm:hidden">
+                                <i class="ph-bold ph-pen-nib text-slate-300 text-3xl"></i>
+                                <span class="text-xs font-bold text-slate-400">Toque para assinar</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Footer de ações — fixo, nunca clipado pelo overflow -->
-            <div class="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-shrink-0" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
-
-                <!-- DESKTOP (sm+): linha única com Voltar/Imprimir | Toggle | Efetivar -->
-                <div class="hidden sm:flex items-center justify-between gap-3">
-                    <!-- Lado esquerdo: Voltar + Imprimir -->
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="voltarParaAnamnese()" class="px-3 py-2 flex items-center gap-1.5 text-sm font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors" style="min-height: 40px;">
-                            <i class="ph-bold ph-arrow-left"></i> Voltar
-                        </button>
-                        <button type="button" onclick="imprimirTermo()" class="px-4 py-2 flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" style="min-height: 40px;">
-                            <i class="ph-bold ph-printer"></i> Imprimir
-                        </button>
-                    </div>
-                    <!-- Lado direito: Toggle + Botao Efetivar -->
-                    <div class="flex items-center gap-3">
-                        <!-- SPRINT 3 · ITEM E: Toggle switch desktop -->
-                        <label id="label_termo_aceito" class="flex items-center gap-2.5 cursor-pointer px-3 py-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/60 select-none transition-colors" style="-webkit-tap-highlight-color: transparent; min-height: 40px;">
-                            <input type="checkbox" id="chk_termo_aceito_desktop" class="sr-only">
-                            <span class="toggle-pill flex-shrink-0" aria-hidden="true"
-                                style="position: relative; display: inline-flex; align-items: center; width: 42px; height: 24px; border-radius: 9999px; background: #cbd5e1; transition: background 0.2s;">
-                                <span class="toggle-knob"
-                                    style="position: absolute; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s, box-shadow 0.2s;"></span>
-                            </span>
-                            <span class="text-sm font-bold text-emerald-800 dark:text-emerald-300">Paciente concorda e assina</span>
-                        </label>
-                        <!-- ITEM B: botão desktop -->
-                        <button id="btn_efetivar_desktop" type="button" onclick="confirmarAgendamentoEGerar()" disabled
-                            class="px-5 py-2.5 text-sm font-bold text-white bg-slate-300 rounded-xl shadow-sm transition-all flex items-center gap-2 flex-shrink-0 cursor-not-allowed"
-                            style="min-height: 40px; transition: background-color 0.2s;">
-                            <i class="ph-bold ph-check-circle"></i> Efetivar Cadastro
-                        </button>
-                    </div>
-                </div>
-
-                <!-- MOBILE (<sm): empilhado vertical -->
-                <div class="flex flex-col gap-3 sm:hidden">
-                    <!-- SPRINT 3 · ITEM E: Toggle switch mobile -->
-                    <label id="label_termo_aceito_mobile" class="flex items-center gap-4 cursor-pointer px-4 py-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border-2 border-emerald-300 dark:border-emerald-800/60 transition-colors" style="-webkit-tap-highlight-color: transparent;">
-                        <input type="checkbox" id="chk_termo_aceito" class="sr-only">
-                        <span class="toggle-pill flex-shrink-0" aria-hidden="true"
-                            style="position: relative; display: inline-flex; align-items: center; width: 54px; height: 30px; border-radius: 9999px; background: #cbd5e1; transition: background 0.25s;">
-                            <span class="toggle-knob"
-                                style="position: absolute; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.25s, box-shadow 0.25s;"></span>
-                        </span>
-                        <span class="text-sm font-bold text-emerald-800 dark:text-emerald-300 leading-snug select-none" style="-webkit-user-select: none;">Li e concordo com o Termo. Assino virtualmente.</span>
+                    <input type="checkbox" id="chk-termo-unified" onchange="checkCanEfetivar()">
+                    <label id="lbl-termo-unified" for="chk-termo-unified">
+                        <span class="tgl-pill"><span class="tgl-knob"></span></span>
+                        <span class="text-sm font-bold text-emerald-800 leading-snug" style="-webkit-user-select:none;">Li e concordo com o Termo de Consentimento</span>
                     </label>
 
-                    <!-- ITEM B: botão principal -->
-                    <button id="btn_efetivar_mobile" type="button" onclick="confirmarAgendamentoEGerar()" disabled
-                        class="w-full flex items-center justify-center gap-2 text-base font-bold text-white bg-slate-300 rounded-2xl shadow-sm transition-all cursor-not-allowed"
-                        style="min-height: 56px; -webkit-tap-highlight-color: transparent; transition: background-color 0.2s;">
+                    <button id="btn-efetivar-unified" type="button" onclick="confirmarAgendamentoEGerar()" disabled>
                         <i class="ph-bold ph-check-circle text-lg"></i> Efetivar Cadastro
                     </button>
 
-                    <!-- Linha secundária: Ver Termo + Voltar -->
-                    <div class="flex gap-2">
                         <button type="button" onclick="verTermoMobile()" class="flex-1 flex items-center justify-center gap-1.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl transition-colors active:bg-slate-50" style="min-height: 44px;">
                             <i class="ph-bold ph-arrow-square-out"></i> Ver Termo
                         </button>
@@ -1032,9 +1064,9 @@
         initCustomSelects();
 
         // === INTEGRAÇÃO COM N8N ===
-        const WEBHOOK_CADASTRO = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/cadastroPaciente";
-        const WEBHOOK_LISTAR = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/listarPacientes";
-        const WEBHOOK_EXCLUIR = (window.AppConfig?.WEBHOOK_BASE_URL || "https://n8n.srv1181762.hstgr.cloud/webhook") + "/delete_paciente";
+        const WEBHOOK_CADASTRO = "https://n8n.srv1181762.hstgr.cloud/webhook/cadastroPaciente";
+        const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
+        const WEBHOOK_EXCLUIR = "https://n8n.srv1181762.hstgr.cloud/webhook/delete_paciente";
 
         // Cache de todos os pacientes para filtro client-side
         let allPacientesData = [];
@@ -1968,8 +2000,8 @@
             if (mode === 'digital') {
                 if (canvasWrap) canvasWrap.style.display = '';
                 
-                if (btnDigital) btnDigital.className = "px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300";
-                if (btnPhysical) btnPhysical.className = "px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800";
+                if (btnDigital) { btnDigital.classList.add('selected'); }
+                if (btnPhysical) { btnPhysical.classList.remove('selected'); }
                 
                 if (window.signatureInstance && !window.signatureInstance.isEmpty()) {
                     if (imgPaciente) {
@@ -1992,21 +2024,19 @@
             } else {
                 if (canvasWrap) canvasWrap.style.display = 'none';
                 
-                if (btnPhysical) btnPhysical.className = "px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300";
-                if (btnDigital) btnDigital.className = "px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800";
+                if (btnPhysical) { btnPhysical.classList.add('selected'); }
+                if (btnDigital) { btnDigital.classList.remove('selected'); }
                 
                 if (imgPaciente) {
                     imgPaciente.style.display = 'none';
                     imgPaciente.src = '';
                 }
                 
-                // Oculta assinatura do médico no modo físico (linha em branco)
                 if (imgMedico) {
                     imgMedico.style.display = 'none';
                     imgMedico.src = '';
                 }
 
-                // No modo físico, exibe a data/hora do atendimento diretamente
                 if (elDataHora) elDataHora.textContent = dataHoraAtendimento;
             }
             checkCanEfetivar();
@@ -2016,37 +2046,55 @@
         function checkCanEfetivar() {
             const isDigital = window.currentConsentMode === 'digital';
             const hasSignature = !isDigital || (window.signatureInstance && !window.signatureInstance.isEmpty());
-            
-            const chkMobile = document.getElementById('chk_termo_aceito');
-            const chkDesktop = document.getElementById('chk_termo_aceito_desktop');
-            const btnMobile = document.getElementById('btn_efetivar_mobile');
-            const btnDesktop = document.getElementById('btn_efetivar_desktop');
 
-            if (btnMobile && chkMobile) {
-                const canEfetivar = chkMobile.checked && hasSignature;
-                btnMobile.disabled = !canEfetivar;
-                if (canEfetivar) {
-                    btnMobile.classList.remove('bg-slate-300', 'cursor-not-allowed');
-                    btnMobile.classList.add('bg-emerald-600', 'active:bg-emerald-800', 'shadow-md', 'cursor-pointer');
-                } else {
-                    btnMobile.classList.remove('bg-emerald-600', 'active:bg-emerald-800', 'shadow-md', 'cursor-pointer');
-                    btnMobile.classList.add('bg-slate-300', 'cursor-not-allowed');
+            // Novo botão unificado
+            const chkUnified = document.getElementById('chk-termo-unified');
+            const btnUnified = document.getElementById('btn-efetivar-unified');
+            const lblUnified = document.getElementById('lbl-termo-unified');
+            if (chkUnified && btnUnified) {
+                const canEfetivar = chkUnified.checked && hasSignature;
+                btnUnified.disabled = !canEfetivar;
+                if (canEfetivar) btnUnified.classList.add('can-submit');
+                else btnUnified.classList.remove('can-submit');
+                if (lblUnified) {
+                    if (chkUnified.checked) lblUnified.classList.add('checked');
+                    else lblUnified.classList.remove('checked');
                 }
             }
 
-            if (btnDesktop && chkDesktop) {
-                const canEfetivar = chkDesktop.checked && hasSignature;
-                btnDesktop.disabled = !canEfetivar;
-                if (canEfetivar) {
-                    btnDesktop.classList.remove('bg-slate-300', 'cursor-not-allowed');
-                    btnDesktop.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'shadow-sm', 'cursor-pointer');
-                } else {
-                    btnDesktop.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'shadow-sm', 'cursor-pointer');
-                    btnDesktop.classList.add('bg-slate-300', 'cursor-not-allowed');
+            // Compat: mantém os checkboxes e botões ocultos sincronizados
+            // para que confirmarAgendamentoEGerar() que lê chk_termo_aceito continue funcionando
+            const chkCompat = document.getElementById('chk_termo_aceito');
+            const chkCompatD = document.getElementById('chk_termo_aceito_desktop');
+            if (chkCompat && chkUnified) chkCompat.checked = chkUnified.checked;
+            if (chkCompatD && chkUnified) chkCompatD.checked = chkUnified.checked;
+        }
+        window.checkCanEfetivar = checkCanEfetivar;
+
+        // Troca de abas no mobile (Ler Termo / Assinar)
+        function termoSetTab(tab) {
+            const tabLer = document.getElementById('tab-ler');
+            const tabAssinar = document.getElementById('tab-assinar');
+            const panelLer = document.getElementById('panel-ler');
+            const panelAssinar = document.getElementById('panel-assinar');
+            if (!tabLer || !panelLer) return;
+            if (tab === 'ler') {
+                tabLer.classList.add('active'); tabAssinar.classList.remove('active');
+                panelLer.classList.add('active'); panelAssinar.classList.remove('active');
+            } else {
+                tabAssinar.classList.add('active'); tabLer.classList.remove('active');
+                panelAssinar.classList.add('active'); panelLer.classList.remove('active');
+                // Resize canvas quando a aba de assinar fica visível
+                if (window.signatureInstance) {
+                    setTimeout(() => window.signatureInstance.resizeCanvas(), 50);
                 }
             }
         }
-        window.checkCanEfetivar = checkCanEfetivar;
+        window.termoSetTab = termoSetTab;
+
+        // Redireciona verTermoMobile() para a aba Ler
+        function verTermoMobile() { termoSetTab('ler'); }
+        window.verTermoMobile = verTermoMobile;
 
         function avancarParaTermo() {
             // Injeta nome do paciente e data/hora exata no bloco de assinatura
@@ -2071,6 +2119,12 @@
             // Oculta modal checklist e exibe modal termo
             document.getElementById('modalChecklistAnamnese').classList.add('hidden');
             document.getElementById('modalTermoConsentimento').classList.remove('hidden');
+            // Sempre começa na aba "Ler Termo" e reseta o toggle
+            termoSetTab('ler');
+            const chkU = document.getElementById('chk-termo-unified');
+            if (chkU) { chkU.checked = false; }
+            const lblU = document.getElementById('lbl-termo-unified');
+            if (lblU) lblU.classList.remove('checked');
 
             // Inicializa ou redimensiona a assinatura digital (com pequeno delay para o modal terminar reflow)
             setTimeout(() => {
