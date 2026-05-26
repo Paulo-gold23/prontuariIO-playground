@@ -9,9 +9,18 @@
         const style = document.createElement('style');
         style.textContent = `
             /* Backgrounds e Textos Globais */
+            /* Cobre o próprio elemento <html> com class dark (descendant selector não funciona em si mesmo) */
+            html.dark { background-color: #0f172a !important; }
             html.dark body { background-color: #0f172a !important; color: #f8fafc !important; }
             html.dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
             html.dark .bg-slate-50 { background-color: #1e293b !important; }
+
+            /* Nav / Header glassmorphism escuro */
+            html.dark nav, html.dark header {
+                background-color: rgba(15, 23, 42, 0.95) !important;
+                border-bottom-color: #334155 !important;
+                backdrop-filter: blur(12px) !important;
+            }
             
             /* Textos */
             html.dark .text-slate-900, html.dark .text-slate-800 { color: #f8fafc !important; }

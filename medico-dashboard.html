@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" class="h-full bg-slate-50 antialiased">
+<html lang="pt-BR" class="h-full bg-slate-50 dark:bg-slate-950 antialiased">
 
 <head>
   <meta charset="UTF-8" />
@@ -21,6 +21,30 @@
   <!-- PDF.js para gerar thumbnails de exames PDF -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="clinica-cicatrize/upload-manager.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Outfit', 'sans-serif'] },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' }
+            },
+            'fade-in-down': {
+              '0%': { opacity: '0', transform: 'translateY(-10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' }
+            }
+          },
+          animation: {
+            'animate-in': 'fadeIn 0.4s ease-out forwards',
+            'fade-in-down': 'fade-in-down 0.2s ease-out'
+          }
+        }
+      }
+    }
+  </script>
   <style>
     body { font-family: 'Outfit', sans-serif; }
     .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
@@ -60,7 +84,7 @@
   </style>
 </head>
 
-<body class="min-h-screen bg-[#F8FAFC] text-slate-700">
+<body class="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-700 dark:text-slate-200">
   <!-- Top Navigation -->
   <nav class="glass-card sticky top-0 z-[50] px-3 sm:px-6 lg:px-12 py-2.5 sm:py-0 sm:h-20 premium-shadow">
     <div class="max-w-[1440px] mx-auto w-full flex justify-between items-center h-full relative">
