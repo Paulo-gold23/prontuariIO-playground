@@ -198,6 +198,11 @@
     window.fecharModalProdutos        = fecharModalProdutos;
     window.confirmarSelecaoProdutos   = confirmarSelecaoProdutos;
     window.filtrarProdutosModal       = filtrarProdutosModal;
+    // ATENÇÃO: o HTML gerado por renderizarLista chama _uiToggleProduto e _uiAlterarQtd
+    // Os nomes abaixo DEVEM bater exatamente com os onclick strings do HTML gerado
+    window._uiToggleProduto           = _uiToggleProduto;
+    window._uiAlterarQtd              = _uiAlterarQtd;
+    // Aliases legados (manter por compatibilidade)
     window._toggleProduto             = _uiToggleProduto;
     window._alterarQtd                = _uiAlterarQtd;
     window.adicionarProdutoManual     = _uiAdicionarProdutoManual;
