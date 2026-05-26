@@ -63,9 +63,15 @@
 <body class="min-h-screen bg-[#F8FAFC] text-slate-700">
   <!-- Top Navigation -->
   <nav class="glass-card sticky top-0 z-[50] px-3 sm:px-6 lg:px-12 py-2.5 sm:py-0 sm:h-20 premium-shadow">
-    <div class="max-w-[1440px] mx-auto w-full flex justify-between items-center h-full">
-      <!-- Logo -->
-      <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+    <div class="max-w-[1440px] mx-auto w-full flex justify-between items-center h-full relative">
+      
+      <!-- Hamburger Button (Mobile Only) -->
+      <button onclick="toggleMobileSidebar(true)" class="sm:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Abrir Menu">
+        <i class="ph-bold ph-list text-2xl"></i>
+      </button>
+
+      <!-- Logo (Centered on mobile, Left on desktop) -->
+      <div class="flex items-center gap-2 sm:gap-4 shrink-0 absolute left-1/2 -translate-x-1/2 sm:static sm:left-auto sm:translate-x-0">
         <div class="w-9 h-9 sm:w-12 sm:h-12 bg-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
           <i class="ph-bold ph-stethoscope text-lg sm:text-2xl"></i>
         </div>
@@ -78,8 +84,11 @@
         </div>
       </div>
 
-      <!-- Right side -->
-      <div class="flex items-center gap-1.5 sm:gap-4 lg:gap-6">
+      <!-- Spacer for centering on mobile -->
+      <div class="w-10 h-10 sm:hidden"></div>
+
+      <!-- Right side (Desktop Menu) -->
+      <div class="hidden sm:flex items-center gap-1.5 sm:gap-4 lg:gap-6">
         <div class="hidden lg:flex flex-col items-end">
           <span class="text-sm font-bold text-slate-900" id="navbar-doctor-name">Dr. Carregando...</span>
           <span class="text-[10px] text-slate-500 font-medium">CRM Ativo • Online</span>
@@ -105,6 +114,64 @@
       </div>
     </div>
   </nav>
+
+  <!-- Mobile Sidebar Overlay -->
+  <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-[990] bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out"></div>
+
+  <!-- Mobile Sidebar -->
+  <div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-[995] w-72 bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col sm:hidden">
+    <!-- Top Bar -->
+    <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200">
+          <i class="ph-bold ph-stethoscope text-lg"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-slate-900 dark:text-white text-base">prontuar.IO</span>
+          <p class="text-[8px] uppercase tracking-[0.1em] font-bold text-emerald-600">Menu</p>
+        </div>
+      </div>
+      <button onclick="toggleMobileSidebar(false)" class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all" title="Fechar Menu">
+        <i class="ph-bold ph-x text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Content / Links -->
+    <div class="flex-1 p-6 space-y-6 overflow-y-auto">
+      <!-- Info Médico -->
+      <div class="pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-col">
+        <span class="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Profissional Conectado</span>
+        <span class="text-sm font-bold text-slate-900 dark:text-white mt-1" id="sidebar-doctor-name">Dr. Carregando...</span>
+      </div>
+
+      <!-- Links -->
+      <div class="space-y-3">
+        <button onclick="abrirModalPerfil(); toggleMobileSidebar(false);" class="w-full flex items-center gap-3 px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-bold rounded-xl hover:bg-emerald-100/70 transition-all text-sm shadow-sm">
+          <i class="ph-bold ph-user-circle text-xl"></i>
+          <span>Meu Perfil</span>
+        </button>
+        
+        <a href="recepcao.html" class="w-full flex items-center gap-3 px-4 py-3.5 bg-slate-900 dark:bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-800/80 transition-all text-sm shadow-sm">
+          <i class="ph-bold ph-users text-xl"></i>
+          <span>Recepção</span>
+        </a>
+        
+        <button id="theme-toggle" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all text-sm font-bold shadow-sm">
+          <i class="ph-bold ph-moon text-xl"></i>
+          <span>Escolha o Tema</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer Action (Logout) -->
+    <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+      <button onclick="logoutMedico()" class="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-bold rounded-xl hover:bg-rose-100 transition-all text-sm">
+        <i class="ph-bold ph-sign-out text-lg"></i>
+        <span>Encerrar Sessão</span>
+      </button>
+    </div>
+  </div>
+
 
   <main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
     <!-- Banner de Perfil Incompleto -->
@@ -519,7 +586,31 @@
     // Auth Check
     let medicoAtivo = JSON.parse(localStorage.getItem("medico_ativo"));
     if (!medicoAtivo) window.location.href = "login.html";
-    else document.getElementById("navbar-doctor-name").innerText = medicoAtivo.nome;
+    else {
+      const docName = medicoAtivo.nome || "Dr. Medico";
+      const navDocEl = document.getElementById("navbar-doctor-name");
+      if (navDocEl) navDocEl.innerText = docName;
+      const sideDocEl = document.getElementById("sidebar-doctor-name");
+      if (sideDocEl) sideDocEl.innerText = docName;
+    }
+
+    // Toggle Mobile Sidebar
+    window.toggleMobileSidebar = function(open) {
+      const sidebar = document.getElementById("mobile-sidebar");
+      const overlay = document.getElementById("mobile-sidebar-overlay");
+      if (!sidebar || !overlay) return;
+      if (open) {
+        sidebar.classList.remove("-translate-x-full");
+        sidebar.classList.add("translate-x-0");
+        overlay.classList.remove("opacity-0", "pointer-events-none");
+        overlay.classList.add("opacity-100", "pointer-events-auto");
+      } else {
+        sidebar.classList.remove("translate-x-0");
+        sidebar.classList.add("-translate-x-full");
+        overlay.classList.remove("opacity-100", "pointer-events-auto");
+        overlay.classList.add("opacity-0", "pointer-events-none");
+      }
+    };
 
     async function garantirMedicoId() {
       let atual = JSON.parse(localStorage.getItem("medico_ativo") || "{}");
@@ -558,6 +649,8 @@
       medicoAtivo = atual;
       const nomeEl = document.getElementById("navbar-doctor-name");
       if (nomeEl && atual.nome) nomeEl.innerText = atual.nome;
+      const sbName = document.getElementById("sidebar-doctor-name");
+      if (sbName && atual.nome) sbName.innerText = atual.nome;
       return atual;
     }
 

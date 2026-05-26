@@ -354,9 +354,16 @@
         function updateIcon() {
             const isDarkActive = document.documentElement.classList.contains('dark');
             btns.forEach(btn => {
-                btn.innerHTML = isDarkActive
-                    ? '<i class="ph-bold ph-sun text-xl text-amber-400"></i>'
-                    : '<i class="ph-bold ph-moon text-xl text-emerald-500"></i>';
+                const iconEl = btn.querySelector('i');
+                if (iconEl) {
+                    iconEl.className = isDarkActive
+                        ? 'ph-bold ph-sun text-xl text-amber-400'
+                        : 'ph-bold ph-moon text-xl text-emerald-500';
+                } else {
+                    btn.innerHTML = isDarkActive
+                        ? '<i class="ph-bold ph-sun text-xl text-amber-400"></i>'
+                        : '<i class="ph-bold ph-moon text-xl text-emerald-500"></i>';
+                }
             });
         }
 
