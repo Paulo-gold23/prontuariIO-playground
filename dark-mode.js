@@ -93,6 +93,116 @@
                 color: #6ee7b7 !important;
             }
 
+            /* ═══════════════════════════════════════════
+               MODAIS DO MÉDICO (sem role=dialog)
+               Cobertura: modalHistorico, modalPerfil,
+               modalConfirmarExclusao, modalProgressoConsolidado
+               ═══════════════════════════════════════════ */
+
+            /* Fundo principal dos painéis dos modais */
+            html.dark #modalHistorico .bg-white,
+            html.dark #modalPerfil .bg-white,
+            html.dark #modalConfirmarExclusao .bg-white,
+            html.dark #modalProgressoConsolidado .bg-white {
+                background-color: #1e293b !important;
+                border-color: #334155 !important;
+            }
+
+            /* Overlay escuro dos modais sem role=dialog */
+            html.dark #modalHistorico .bg-slate-900\/40,
+            html.dark #modalPerfil .bg-slate-900\/40,
+            html.dark #modalConfirmarExclusao .bg-slate-900\/50,
+            html.dark #modalProgressoConsolidado .bg-slate-900\/50 {
+                background-color: rgba(0, 0, 0, 0.7) !important;
+            }
+
+            /* Header/seções internas dos modais do médico */
+            html.dark #modalHistorico .border-b,
+            html.dark #modalPerfil .border-b {
+                border-bottom-color: #334155 !important;
+            }
+            html.dark #modalHistorico .border-slate-100,
+            html.dark #modalPerfil .border-slate-100 {
+                border-color: #334155 !important;
+            }
+
+            /* Textos nos modais do médico */
+            html.dark #modalHistorico .text-slate-900,
+            html.dark #modalHistorico .text-slate-800,
+            html.dark #modalPerfil .text-slate-900,
+            html.dark #modalPerfil .text-slate-800,
+            html.dark #modalConfirmarExclusao .text-slate-900,
+            html.dark #modalProgressoConsolidado .text-slate-900 {
+                color: #f1f5f9 !important;
+            }
+            html.dark #modalHistorico .text-slate-600,
+            html.dark #modalHistorico .text-slate-500,
+            html.dark #modalPerfil .text-slate-500,
+            html.dark #modalPerfil .text-slate-600,
+            html.dark #modalConfirmarExclusao .text-slate-600,
+            html.dark #modalConfirmarExclusao .text-slate-400,
+            html.dark #modalProgressoConsolidado .text-slate-500 {
+                color: #94a3b8 !important;
+            }
+
+            /* Inputs no modal de perfil do médico */
+            html.dark #modalPerfil input,
+            html.dark #modalPerfil textarea,
+            html.dark #modalPerfil select {
+                background-color: #0f172a !important;
+                color: #f1f5f9 !important;
+                border-color: #334155 !important;
+            }
+            html.dark #modalPerfil label {
+                color: #94a3b8 !important;
+            }
+
+            /* Botões secundários (bg-slate-100) nos modais do médico */
+            html.dark #modalHistorico .bg-slate-100,
+            html.dark #modalPerfil .bg-slate-100,
+            html.dark #modalConfirmarExclusao .bg-slate-100 {
+                background-color: #263147 !important;
+                color: #cbd5e1 !important;
+            }
+
+            /* Aba activa do histórico */
+            html.dark #modalHistorico .modal-tab.active {
+                color: #34d399 !important;
+                border-bottom-color: #34d399 !important;
+            }
+            html.dark #modalHistorico .modal-tab {
+                color: #64748b !important;
+            }
+
+            /* Cards do histórico (bg-white items) */
+            html.dark #historicoConteudo .bg-white,
+            html.dark #listaHistorico .bg-white {
+                background-color: #1e293b !important;
+                border-color: #334155 !important;
+            }
+
+            /* Upload zone no modal de imagens */
+            html.dark #upload-zona {
+                border-color: #334155 !important;
+                background-color: #1e293b !important;
+            }
+            html.dark #upload-zona:hover {
+                border-color: #34d399 !important;
+            }
+
+            /* Sort menu dropdown no dashboard */
+            html.dark #sortMenu {
+                background-color: #1e293b !important;
+                border-color: #334155 !important;
+            }
+            html.dark #sortMenu button {
+                color: #cbd5e1 !important;
+            }
+            html.dark #sortMenu button:hover {
+                background-color: #263147 !important;
+                color: #34d399 !important;
+            }
+
             /* Cards de checkbox dentro do modal (bg-slate-50 + border) */
             html.dark [role="dialog"] label.bg-slate-50,
             html.dark [role="dialog"] label.flex.bg-slate-50,
