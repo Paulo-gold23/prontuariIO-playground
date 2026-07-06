@@ -17,5 +17,7 @@ window.AppConfig = {
         PRODUTOS:               'cicatrize_produtos',
         ASSINATURAS:            'cicatrize_prontuario_assinaturas',
         AUDITORIA:              'cicatrize_auditoria_logs',
+        AGENDAMENTOS:           'agendamentos',
+        CHECKLIST_ANAMNESE:     'checklist_anamnese',
     },
 };

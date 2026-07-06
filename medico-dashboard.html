@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="styles.css">
   <!-- PDF.js para gerar thumbnails de exames PDF -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script src="clinica-cicatrize/upload-manager.js"></script>
+  <script src="js/shared/upload-manager.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -277,6 +277,20 @@
             <span class="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider"><span id="filteredCount">0</span> <span class="hidden sm:inline">resultados</span><span class="sm:hidden">res.</span></span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── SEÇÃO DE AGENDAMENTOS DO DIA (EXCLUSIVO L&M) ── -->
+    <div id="secaoAgendamentosDia" class="hidden mb-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-2 h-6 bg-emerald-500 rounded-full"></div>
+          <h3 class="text-base sm:text-lg font-black text-slate-800 dark:text-white uppercase tracking-wider">Agendamentos de Hoje</h3>
+        </div>
+        <span id="cal-agendamentos-count" class="text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full">0 agendados</span>
+      </div>
+      <div id="cal-agendamentos-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Renderizado dinamicamente via JS -->
       </div>
     </div>
 
@@ -854,6 +868,7 @@
         // Render with current filter/search state
         renderFilteredCards();
         carregarHistoricoGlobal();
+        await carregarAgendamentosHoje();
       } catch (e) {
         console.error(e);
         container.innerHTML = `<div class="col-span-full p-8 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl text-center font-bold">Falha ao conectar com o serviço.</div>`;
@@ -1200,7 +1215,7 @@
         const resp = await fetch("https://n8n.srv1181762.hstgr.cloud/webhook/mergeRelatorioPDF", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ paciente_id, medico_id })
+          body: JSON.stringify({ paciente_id, medico_id, tipo_clinica: medicoAtivo.tipo_clinica })
         });
 
         modalProgresso.classList.add("hidden");
@@ -1318,7 +1333,8 @@
 
     function verificarPerfilCompleto(medico) {
       if (!medico) return false;
-      if (!medico.nome_completo || !medico.nome || !medico.assinatura_url) return false;
+      if (!medico.nome_completo || !medico.nome) return false;
+      if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
       if (!medico.especialidade) return false;
       if (medico.tipo_clinica !== 'cicatrize') {
         if (!medico.crm || !medico.uf_crm) return false;
@@ -1541,9 +1557,15 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      garantirMedicoId().then(() => {
+      garantirMedicoId().then((medico) => {
         atualizarBannerPerfil();
         
+        // Oculta link "Recepção" para médicos L&M (eles não usam o módulo da Cicatrize)
+        if (medico && medico.tipo_clinica === 'lm') {
+          const linkRecepcao = document.querySelector('a[href="recepcao.html"]');
+          if (linkRecepcao) linkRecepcao.style.display = 'none';
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const openProfile = urlParams.get('openProfile') === 'true';
         const incompleto = !verificarPerfilCompleto(medicoAtivo);
@@ -1559,6 +1581,145 @@
     });
 
     setInterval(carregarPacientes, 45000);
+
+    async function carregarAgendamentosHoje() {
+      const secao = document.getElementById('secaoAgendamentosDia');
+      const listContainer = document.getElementById('cal-agendamentos-list');
+      const countEl = document.getElementById('cal-agendamentos-count');
+      if (!secao || !listContainer) return;
+
+      const medico = await garantirMedicoId();
+      if (!medico || medico.tipo_clinica !== 'lm') {
+        secao.classList.add('hidden');
+        return;
+      }
+
+      secao.classList.remove('hidden');
+      listContainer.innerHTML = `
+        <div class="col-span-full text-center text-slate-400 py-6">
+          <i class="ph-fill ph-spinner animate-spin text-xl mr-2"></i> Carregando agenda de hoje...
+        </div>
+      `;
+
+      try {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        
+        // Carrega agendamentos de hoje do Supabase
+        const { data, error } = await window.supabaseClient
+          .from('agendamentos')
+          .select('*, pacientes(*)')
+          .eq('medico_id', medico.id)
+          .eq('data_agendamento', hojeStr)
+          .order('horario', { ascending: true });
+
+        if (error) throw error;
+
+        const agendamentos = data || [];
+        countEl.innerText = `${agendamentos.length} ${agendamentos.length === 1 ? 'agendado' : 'agendados'}`;
+
+        if (agendamentos.length === 0) {
+          listContainer.innerHTML = `
+            <div class="col-span-full text-center text-slate-400 py-6 font-bold text-xs">
+              Nenhum agendamento para hoje.
+            </div>
+          `;
+          return;
+        }
+
+        listContainer.innerHTML = '';
+        agendamentos.forEach(function (ag) {
+          const card = document.createElement('div');
+          card.className = "flex items-center justify-between p-4 border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-950 rounded-2xl transition-all shadow-sm";
+          
+          let btnText = 'Atender';
+          let btnClass = 'bg-emerald-500 hover:bg-emerald-600 text-white';
+          
+          if (ag.status === 'em_atendimento') {
+            btnText = 'Em Consulta';
+            btnClass = 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse';
+          } else if (ag.status === 'finalizado') {
+            btnText = 'Finalizado';
+            btnClass = 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed';
+          }
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-black text-slate-800 dark:text-white">${ag.horario.substring(0, 5)}</span>
+                <span class="text-[9px] font-black uppercase px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-full">${ag.status}</span>
+              </div>
+              <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">${ag.pacientes ? ag.pacientes.nome : 'Sem Paciente'}</h4>
+              ${ag.pacientes && ag.pacientes.telefone ? `<p class="text-[10px] text-slate-400 mt-0.5">${ag.pacientes.telefone}</p>` : ''}
+            </div>
+            
+            <button onclick="iniciarAgendamento('${ag.id}', '${ag.paciente_id}', '${ag.pacientes ? ag.pacientes.nome : ''}', '${ag.pacientes ? ag.pacientes.convenio || 'Particular' : 'Particular'}', '${ag.status}')" class="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${btnClass}" ${ag.status === 'finalizado' ? 'disabled' : ''}>
+              ${btnText}
+            </button>
+          `;
+          listContainer.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        listContainer.innerHTML = `
+          <div class="col-span-full text-center text-rose-500 font-bold text-xs py-6">
+            Erro ao carregar agendamentos.
+          </div>
+        `;
+      }
+    }
+
+    window.iniciarAgendamento = async function (agId, pacId, pacNome, convenio, status) {
+      if (status === 'finalizado') return;
+
+      // Se for iniciar ou continuar atendimento
+      if (status !== 'em_atendimento') {
+        try {
+          // 1. Cria uma nova consulta no Supabase
+          const medico = await garantirMedicoId();
+          const { data, error } = await window.supabaseClient
+            .from('consultas')
+            .insert({
+              paciente_id: pacId,
+              medico_id: medico.id,
+              status_atendimento: 'AGUARDANDO' // ou 'EM ATENDIMENTO'
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          const consultaId = data.id;
+
+          // 2. Atualiza status do agendamento
+          await window.supabaseClient
+            .from('agendamentos')
+            .update({
+              status: 'em_atendimento',
+              consulta_id: consultaId
+            })
+            .eq('id', agId);
+
+          // 3. Redireciona para o atendimento
+          window.location.href = `atendimento.html?id=${consultaId}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
+        } catch (e) {
+          window.showToast('Erro ao iniciar atendimento: ' + e.message, 'error');
+        }
+      } else {
+        // Se já está em atendimento, busca a consulta correspondente
+        try {
+          const { data } = await window.supabaseClient
+            .from('agendamentos')
+            .select('consulta_id')
+            .eq('id', agId)
+            .single();
+
+          if (data && data.consulta_id) {
+            window.location.href = `atendimento.html?id=${data.consulta_id}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
+          }
+        } catch (e) {}
+      }
+    }
   </script>
 </body>
 </html>

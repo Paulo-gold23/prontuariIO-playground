@@ -549,6 +549,22 @@
 
             <div class="p-8 sm:p-12">
 
+                <!-- ── SEÇÃO ANAMNESE SOMENTE LEITURA (L&M) ── -->
+                <div id="secaoAnamneseReadOnly" class="hidden mb-8 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-all">
+                    <button onclick="toggleAnamneseCard()" type="button" class="w-full flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100/50 transition-all">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                                <i class="ph-bold ph-heartbeat text-lg"></i>
+                            </div>
+                            <span class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Histórico de Anamnese (Preenchido pela Recepção)</span>
+                        </div>
+                        <i id="anamnese-toggle-icon" class="ph-bold ph-caret-down text-slate-400"></i>
+                    </button>
+                    <div id="anamnese-detalhes-content" class="hidden p-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700 dark:text-slate-300">
+                        <!-- Renderizado via JS -->
+                    </div>
+                </div>
+
                 <!-- Área de Gravação -->
                 <div id="gravacaoContainer" class="flex flex-col items-center justify-center py-4">
                     <!-- Visualizer -->

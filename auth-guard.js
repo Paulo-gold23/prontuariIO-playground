@@ -47,9 +47,16 @@ async function checkAuth() {
         }
 
         // Usuário está logado — se tentar acessar login, redireciona para a área correta
+        // Mantém a mesma tabela de rotas do login.html:
+        //   secretaria (L&M)   → secretaria-dashboard.html
+        //   medico (qualquer)  → medico-dashboard.html
+        //   recepcao / outro   → recepcao.html
         if (isLoginPage) {
-            const userRole = localStorage.getItem('user_role');
-            if (userRole === 'medico') {
+            const userRole   = localStorage.getItem('user_role');
+            const medicoAtivo = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
+            if (userRole === 'secretaria' || medicoAtivo.cargo === 'secretaria') {
+                window.location.href = 'secretaria-dashboard.html';
+            } else if (userRole === 'medico') {
                 window.location.href = 'medico-dashboard.html';
             } else {
                 window.location.href = 'recepcao.html';
@@ -79,7 +86,7 @@ async function fetchMedicoData(userId) {
     try {
         const { data, error } = await supabaseClient
             .from('medicos')
-            .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, auth_user_id, tipo_clinica')
+            .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, auth_user_id, tipo_clinica, cargo, clinica_id')
             .eq('auth_user_id', userId)
             .single();
 
@@ -87,7 +94,7 @@ async function fetchMedicoData(userId) {
             console.warn('Não encontrou médico pelo auth_user_id, tentando pelo id:', error.message);
             const { data: data2, error: error2 } = await supabaseClient
                 .from('medicos')
-                .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, tipo_clinica')
+                .select('id, nome, nome_completo, crm, uf_crm, especialidade, assinatura_url, tipo_clinica, cargo, clinica_id')
                 .eq('id', userId)
                 .single();
             

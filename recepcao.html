@@ -191,10 +191,15 @@
             }
         };
 
-        // Trava de segurança da Secretária
+        // Guarda 1: usuário logado (flag legado Cicatrize)
         const secretariaAtiva = localStorage.getItem('secretaria_ativa');
         if (!secretariaAtiva) {
             window.location.href = 'login.html';
+        }
+        // Guarda 2: bloqueia secretárias L&M — elas têm painel próprio
+        const _roleGuard = localStorage.getItem('user_role');
+        if (_roleGuard === 'secretaria') {
+            window.location.href = 'secretaria-dashboard.html';
         }
 
         // === POPULAR MEDICO_ID no campo hidden ===

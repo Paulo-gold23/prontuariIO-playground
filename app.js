@@ -80,7 +80,8 @@ async function garantirMedicoId() {
 
 function verificarPerfilCompleto(medico) {
     if (!medico) return false;
-    if (!medico.nome_completo || !medico.nome || !medico.assinatura_url) return false;
+    if (!medico.nome_completo || !medico.nome) return false;
+    if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
     if (!medico.especialidade) return false;
     if (medico.tipo_clinica !== 'cicatrize') {
         if (!medico.crm || !medico.uf_crm) return false;
@@ -233,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 encodeURIComponent(medicoAtivo.nome) + '&background=6366f1&color=fff';
         }
         ativarModoCicatrize();
+        ativarModoLm();
     }).catch(function (err) { console.error(err); });
 
     // Preenche dados do paciente
@@ -494,14 +496,19 @@ if (btnCancelarAssinatura) btnCancelarAssinatura.onclick = fecharModalAssinatura
 if (btnFecharModalAssin)   btnFecharModalAssin.onclick   = fecharModalAssinatura;
 
 if (btnAprovar) {
-    btnAprovar.onclick = function () {
-        var chk = document.getElementById('chkUsarCarimbo');
-        var usarCarimbo = chk && chk.checked;
-        if (!usarCarimbo && assinaturaMedico && assinaturaMedico.isEmpty()) {
-            window.showToast('Por favor, insira a assinatura do profissional responsável antes de aprovar.', 'warning');
-            return;
+    btnAprovar.onclick = async function () {
+        var isLM = medicoAtivo && medicoAtivo.tipo_clinica === 'lm';
+        if (isLM) {
+            await aprovarConsultaLM();
+        } else {
+            var chk = document.getElementById('chkUsarCarimbo');
+            var usarCarimbo = chk && chk.checked;
+            if (!usarCarimbo && assinaturaMedico && assinaturaMedico.isEmpty()) {
+                window.showToast('Por favor, insira a assinatura do profissional responsável antes de aprovar.', 'warning');
+                return;
+            }
+            abrirModalAssinatura();
         }
-        abrirModalAssinatura();
     };
 }
 
@@ -865,4 +872,201 @@ if (btnDescartar) {
             function () { window.location.href = 'medico-dashboard.html'; }
         );
     };
+}
+
+// ── Métodos para Clínica L&M ──────────────────────────────────────────────────
+
+window.toggleAnamneseCard = function () {
+    var content = document.getElementById('anamnese-detalhes-content');
+    var icon = document.getElementById('anamnese-toggle-icon');
+    if (!content || !icon) return;
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        content.classList.add('grid');
+        icon.className = 'ph-bold ph-caret-up text-slate-400';
+    } else {
+        content.classList.add('hidden');
+        content.classList.remove('grid');
+        icon.className = 'ph-bold ph-caret-down text-slate-400';
+    }
+};
+
+async function carregarAnamneseReadOnly(pacienteId) {
+    var container = document.getElementById('anamnese-detalhes-content');
+    if (!container || !window.supabaseClient) return;
+
+    container.innerHTML = `
+        <div class="col-span-full text-center text-slate-400 py-4">
+            <i class="ph-fill ph-spinner animate-spin text-lg mr-1.5"></i> Carregando dados do histórico...
+        </div>
+    `;
+
+    try {
+        var res = await window.supabaseClient
+            .from('checklist_anamnese')
+            .select('*')
+            .eq('paciente_id', pacienteId)
+            .limit(1);
+
+        if (res.error) throw res.error;
+
+        if (!res.data || res.data.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-full text-center text-slate-400 py-4 font-semibold">
+                    Nenhum histórico de anamnese cadastrado para este paciente.
+                </div>
+            `;
+            return;
+        }
+
+        var ana = res.data[0];
+        
+        var simNao = function (val) {
+            return val ? '<span class="text-emerald-500 font-bold">Sim</span>' : '<span class="text-slate-400">Não</span>';
+        };
+
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Doenças Crônicas</p>
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${simNao(ana.has_doencas_cronicas)}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Alergias</p>
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${simNao(ana.has_alergias)}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Medicamentos em Uso Contínuo</p>
+                    <p class="text-xs font-semibold text-slate-750 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50 mt-0.5">${ana.uso_continuo || 'Nenhum'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Tabagismo ou Etilismo</p>
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${simNao(ana.tabagismo_etilismo)}</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Cicatriação Anormal</p>
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${simNao(ana.historico_cicatrizacao_anormal)}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Cirurgias Anteriores</p>
+                    <p class="text-xs font-semibold text-slate-750 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50 mt-0.5">${ana.cirurgias_anteriores || 'Nenhuma'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Condições de Pele</p>
+                    <p class="text-xs font-semibold text-slate-750 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50 mt-0.5">${ana.condicoes_pele || 'Nenhuma'}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Histórico Familiar</p>
+                    <p class="text-xs font-semibold text-slate-750 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50 mt-0.5">${ana.historico_familiar || 'Sem registros'}</p>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        console.error('[Anamnese] Erro ao carregar:', e);
+        container.innerHTML = `
+            <div class="col-span-full text-center text-rose-500 py-4 font-bold">
+                Erro ao carregar dados do histórico.
+            </div>
+        `;
+    }
+}
+
+function ativarModoLm() {
+    if (medicoAtivo && medicoAtivo.tipo_clinica === 'lm') {
+        var secaoAssin = document.getElementById('secaoAssinaturasStylus');
+        if (secaoAssin) secaoAssin.classList.add('hidden');
+
+        var panelAnamnese = document.getElementById('secaoAnamneseReadOnly');
+        if (panelAnamnese && pacienteAtual && pacienteAtual.id) {
+            panelAnamnese.classList.remove('hidden');
+            carregarAnamneseReadOnly(pacienteAtual.id);
+        }
+    }
+}
+
+async function aprovarConsultaLM() {
+    if (!consultaIdGlobal) return;
+
+    btnAprovar.disabled = true;
+    btnAprovar.innerHTML = '<i class="ph ph-spinner animate-spin text-lg"></i> Finalizando...';
+
+    var produtosPayload = window.ProdutoService ? window.ProdutoService.getPayload() : [];
+
+    var payload = {
+        consulta_id: consultaIdGlobal,
+        conteudo_medico: {
+            hda:                  _getVal('hda'),
+            exame_fisico:         _getVal('exame_fisico'),
+            diagnostico:          _getVal('diagnostico'),
+            tratamento:           _getVal('tratamento'),
+            produtos_utilizados:  produtosPayload,
+            curativo:             null,
+        },
+        produtos_utilizados: produtosPayload,
+        assinatura_medico_base64: null,
+        assinatura_paciente_base64: null,
+        assinatura_metadados: null,
+        usar_carimbo: false,
+        medico_dados: medicoAtivo
+    };
+
+    // Salva produtos no Supabase se houver
+    if (window.supabaseClient && produtosPayload.length > 0) {
+        try {
+            await window.supabaseClient
+                .from('consultas')
+                .update({ produtos_utilizados: produtosPayload })
+                .eq('id', consultaIdGlobal);
+        } catch (e) {
+            console.error('[app] Falha ao salvar produtos:', e);
+        }
+    }
+
+    try {
+        var authHeaders = await window.getAuthHeaders();
+        var fetchPromise = fetch(WEBHOOK_BASE_URL + '/aprovarConsulta', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders),
+            body: JSON.stringify(payload),
+        });
+
+        var timeoutPromise = new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error('TIMEOUT')); }, 25000);
+        });
+
+        var res;
+        try {
+            res = await Promise.race([fetchPromise, timeoutPromise]);
+        } catch (e) {
+            if (e.message === 'TIMEOUT') {
+                res = { ok: true, json: function () { return { success: true }; } };
+            } else {
+                throw e;
+            }
+        }
+
+        if (res.ok) {
+            _bloquearFormulario();
+            await _concluirAtendimento(payload);
+            window.showToast('Consulta finalizada com sucesso!');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            throw new Error('Erro Servidor: ' + res.status);
+        }
+
+    } catch (err) {
+        console.error(err);
+        if (err.message.includes('TIMEOUT') || err.message.length < 50) {
+            window.showToast('Processo demorou, mas deve finalizar em breve.', 'warning');
+            _forcarUiSucesso(payload);
+        } else {
+            window.showToast('Erro ao finalizar: ' + err.message, 'error');
+            btnAprovar.disabled = false;
+            btnAprovar.innerHTML = 'Tentar Novamente';
+        }
+    }
 }
