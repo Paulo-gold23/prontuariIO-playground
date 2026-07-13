@@ -427,6 +427,7 @@
                         <h5 class="text-sm font-bold text-slate-800 dark:text-white">${ag.pacientes ? ag.pacientes.nome : 'Sem Paciente'}</h5>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             Médico: <strong>${ag.medicos ? ag.medicos.nome : 'Sem Médico'}</strong>
+                            ${ag.tipo_agendamento ? ` · Tipo: <strong>${ag.tipo_agendamento}</strong>` : ''}
                             ${ag.pacientes && ag.pacientes.telefone ? ` · Tel: ${ag.pacientes.telefone}` : ''}
                         </p>
                         ${ag.observacoes ? `<p class="text-xs italic text-slate-400 mt-1">Obs: ${ag.observacoes}</p>` : ''}
@@ -556,7 +557,7 @@
                 </div>
             </div>
             <p class="text-[11px] font-bold text-slate-800 dark:text-slate-300 truncate">${ag.pacientes ? ag.pacientes.nome : 'Sem Paciente'}</p>
-            <p class="text-[9px] text-slate-400 mt-0.5 truncate">Dr(a). ${ag.medicos ? ag.medicos.nome : 'Médico'}</p>
+            <p class="text-[9px] text-slate-400 mt-0.5 truncate">Dr(a). ${ag.medicos ? ag.medicos.nome : 'Médico'} ${ag.tipo_agendamento ? ` · ${ag.tipo_agendamento}` : ''}</p>
         `;
 
         card.addEventListener('click', function () {
@@ -654,6 +655,7 @@
                             <h5 class="text-sm font-bold text-slate-800 dark:text-white">${ag.pacientes ? ag.pacientes.nome : 'Sem Paciente'}</h5>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                 Médico: <strong>${ag.medicos ? ag.medicos.nome : 'Sem Médico'}</strong>
+                                ${ag.tipo_agendamento ? ` · Tipo: <strong>${ag.tipo_agendamento}</strong>` : ''}
                                 ${ag.pacientes && ag.pacientes.telefone ? ` · Tel: ${ag.pacientes.telefone}` : ''}
                             </p>
                             ${choqueWarning}
@@ -703,10 +705,11 @@
     async function _abrirFormAgendamento(dataPreDefinida) {
         var dataFinal = dataPreDefinida || _formatDate(_dataReferencia);
 
-        // Garante que a lista de médicos está carregada antes de exibir o seletor
-        if (_medicos.length === 0) {
-            await _carregarMedicos();
-        }
+        // Garante que a lista de médicos e de pacientes está atualizada antes de exibir o seletor
+        await Promise.all([
+            _carregarMedicos(),
+            _carregarPacientes()
+        ]);
         
         var modal = document.createElement('div');
         modal.id = 'modal-agendamento-temp';
@@ -743,6 +746,25 @@
                                     return `<option value="${m.id}">Dr(a). ${m.nome}${esp}</option>`;
                                   }).join('')
                             }
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Agendamento -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo de Agendamento</label>
+                        <select id="form-agendar-tipo" required class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                            <option value="">Selecione um Tipo...</option>
+                            <option value="CONSULTA DE RETORNO">CONSULTA DE RETORNO</option>
+                            <option value="CONSULTA EM CONSULTÓRIO">CONSULTA EM CONSULTÓRIO</option>
+                            <option value="CONSULTA EM CONSULTÓRIO COM DESCONTO">CONSULTA EM CONSULTÓRIO COM DESCONTO</option>
+                            <option value="CONSULTA ON-LINE">CONSULTA ON-LINE</option>
+                            <option value="LAUDO MÉDICO">LAUDO MÉDICO</option>
+                            <option value="LAUDO MÉDICO - RENOVAÇÃO">LAUDO MÉDICO - RENOVAÇÃO</option>
+                            <option value="RECEITAS MÉDICAS">RECEITAS MÉDICAS</option>
+                            <option value="ATENDIMENTO DOMICILIAR">ATENDIMENTO DOMICILIAR</option>
+                            <option value="ATENDIMENTO DOMICILIAR - RETORNO">ATENDIMENTO DOMICILIAR - RETORNO</option>
+                            <option value="ATESTADO DE ÓBITO">ATESTADO DE ÓBITO</option>
+                            <option value="ATESTADO MÉDICO">ATESTADO MÉDICO</option>
                         </select>
                     </div>
 
@@ -789,6 +811,7 @@
             var dt = document.getElementById('form-agendar-data').value;
             var hr = document.getElementById('form-agendar-hora').value;
             var obs = document.getElementById('form-agendar-obs').value;
+            var tipo = document.getElementById('form-agendar-tipo').value;
 
             if (!/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(hr)) {
                 if (window.showToast) window.showToast('Horário inválido. Digite no formato HH:MM (00:00 às 23:59)', 'error');
@@ -801,7 +824,8 @@
                     medicoId: mId,
                     dataAgendamento: dt,
                     horario: hr,
-                    observacoes: obs
+                    observacoes: obs,
+                    tipoAgendamento: tipo
                 });
                 if (window.showToast) window.showToast('Agendamento criado com sucesso!', 'success');
                 modal.remove();
@@ -861,6 +885,10 @@
                             <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Horário</p>
                             <p class="text-slate-800 dark:text-slate-200">${ag.horario.substring(0, 5)}</p>
                         </div>
+                        <div class="col-span-2">
+                            <p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Tipo de Agendamento</p>
+                            <p class="text-slate-800 dark:text-slate-200">${ag.tipo_agendamento || 'Não especificado'}</p>
+                        </div>
                     </div>
 
                     ${ag.observacoes ? `
@@ -877,6 +905,12 @@
                             CONFIRMAR PRESENÇA
                         </button>
                         ` : ''}
+
+                        ${ag.status !== 'cancelado' ? `
+                        <button id="detalhe-btn-editar" class="w-full py-3 border border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-black rounded-xl transition-all">
+                            EDITAR AGENDAMENTO
+                        </button>
+                        ` : ''}
                         
                         ${(isAgendado || isConfirmado) ? `
                         <div class="grid grid-cols-2 gap-2">
@@ -888,6 +922,76 @@
                             </button>
                         </div>
                         ` : ''}
+
+                        <!-- Formulário de Edição Completa (oculto por padrão) -->
+                        <div id="secao-editar" class="hidden space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 mt-2">
+                            <h5 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Editar Agendamento</h5>
+                            
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[9px] font-black uppercase text-slate-400">Paciente</label>
+                                <select id="editar-paciente" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    ${_pacientes.map(function(p) {
+                                        var selected = p.id === ag.paciente_id ? 'selected' : '';
+                                        var cpfFmt = p.cpf ? ` (CPF: ${p.cpf})` : '';
+                                        return `<option value="${p.id}" ${selected}>${p.nome}${cpfFmt}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[9px] font-black uppercase text-slate-400">Médico Responsável</label>
+                                <select id="editar-medico" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    ${_medicos.map(function(m) {
+                                        var selected = m.id === ag.medico_id ? 'selected' : '';
+                                        var esp = m.especialidade ? ` (${m.especialidade})` : '';
+                                        return `<option value="${m.id}" ${selected}>Dr(a). ${m.nome}${esp}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[9px] font-black uppercase text-slate-400">Tipo de Agendamento</label>
+                                <select id="editar-tipo" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                    <option value="" ${!ag.tipo_agendamento ? 'selected' : ''}>Selecione um Tipo...</option>
+                                    ${[
+                                        'CONSULTA DE RETORNO',
+                                        'CONSULTA EM CONSULTÓRIO',
+                                        'CONSULTA EM CONSULTÓRIO COM DESCONTO',
+                                        'CONSULTA ON-LINE',
+                                        'LAUDO MÉDICO',
+                                        'LAUDO MÉDICO - RENOVAÇÃO',
+                                        'RECEITAS MÉDICAS',
+                                        'ATENDIMENTO DOMICILIAR',
+                                        'ATENDIMENTO DOMICILIAR - RETORNO',
+                                        'ATESTADO DE ÓBITO',
+                                        'ATESTADO MÉDICO'
+                                    ].map(function(t) {
+                                        var selected = ag.tipo_agendamento === t ? 'selected' : '';
+                                        return `<option value="${t}" ${selected}>${t}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black uppercase text-slate-400">Data</label>
+                                    <input type="date" id="editar-data" value="${ag.data_agendamento}" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black uppercase text-slate-400">Horário</label>
+                                    <input type="text" id="editar-hora" value="${ag.horario.substring(0, 5)}" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[9px] font-black uppercase text-slate-400">Observações (opcional)</label>
+                                <textarea id="editar-obs" rows="2" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none">${ag.observacoes || ''}</textarea>
+                            </div>
+
+                            <button id="editar-confirmar" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition-all">
+                                SALVAR ALTERAÇÕES
+                            </button>
+                        </div>
 
                         <!-- Formulário de Remarcação (oculto por padrão) -->
                         <div id="secao-remarcar" class="hidden space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 mt-2">
@@ -938,6 +1042,8 @@
             document.getElementById('detalhe-btn-cancelar').addEventListener('click', function () {
                 document.getElementById('secao-cancelar').classList.toggle('hidden');
                 document.getElementById('secao-remarcar').classList.add('hidden');
+                var secEdit = document.getElementById('secao-editar');
+                if (secEdit) secEdit.classList.add('hidden');
             });
 
             document.getElementById('cancelar-confirmar').addEventListener('click', async function () {
@@ -956,6 +1062,8 @@
             document.getElementById('detalhe-btn-remarcar').addEventListener('click', function () {
                 document.getElementById('secao-remarcar').classList.toggle('hidden');
                 document.getElementById('secao-cancelar').classList.add('hidden');
+                var secEdit = document.getElementById('secao-editar');
+                if (secEdit) secEdit.classList.add('hidden');
             });
 
             // Mask para hora de remarcação
@@ -982,6 +1090,49 @@
                     atualizarDados();
                 } catch (e) {
                     if (window.showToast) window.showToast('Erro ao remarcar: ' + e.message, 'error');
+                }
+            });
+        }
+
+        if (ag.status !== 'cancelado') {
+            // Toggle Editar Secao
+            document.getElementById('detalhe-btn-editar').addEventListener('click', function () {
+                document.getElementById('secao-editar').classList.toggle('hidden');
+                document.getElementById('secao-remarcar').classList.add('hidden');
+                document.getElementById('secao-cancelar').classList.add('hidden');
+            });
+
+            var editHora = document.getElementById('editar-hora');
+            _aplicarMascaraHora(editHora);
+
+            // Confirmar Edição
+            document.getElementById('editar-confirmar').addEventListener('click', async function () {
+                var pId = document.getElementById('editar-paciente').value;
+                var mId = document.getElementById('editar-medico').value;
+                var tipo = document.getElementById('editar-tipo').value;
+                var dt = document.getElementById('editar-data').value;
+                var hr = document.getElementById('editar-hora').value;
+                var obs = document.getElementById('editar-obs').value;
+
+                if (!/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(hr)) {
+                    if (window.showToast) window.showToast('Horário de agendamento inválido (00:00 às 23:59)', 'error');
+                    return;
+                }
+
+                try {
+                    await window.AgendaService.atualizar(id, {
+                        paciente_id:      pId,
+                        medico_id:        mId,
+                        tipo_agendamento: tipo || null,
+                        data_agendamento: dt,
+                        horario:          hr,
+                        observacoes:      obs || null
+                    });
+                    if (window.showToast) window.showToast('Agendamento atualizado com sucesso!', 'success');
+                    modal.remove();
+                    atualizarDados();
+                } catch (e) {
+                    if (window.showToast) window.showToast('Erro ao atualizar: ' + e.message, 'error');
                 }
             });
         }

@@ -74,7 +74,8 @@
             observacoes:      dados.observacoes || null,
             status:           'agendado',
             created_by:       medicoLocal.id || null,
-            clinica_id:       medicoLocal.clinica_id || null  // obrigatório para RLS tenant isolation
+            clinica_id:       medicoLocal.clinica_id || null,  // obrigatório para RLS tenant isolation
+            tipo_agendamento: dados.tipoAgendamento || null
         };
 
         var res = await supabase
