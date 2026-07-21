@@ -1266,6 +1266,13 @@
             window._pacienteNomeParaRelatorio = urlParams.get('paciente') || 'Paciente';
             var med = JSON.parse(localStorage.getItem('medico_ativo') || '{}');
             window._medicoNomeParaRelatorio = med.nome ? 'Dr(a). ' + med.nome : 'Médico';
+
+            var btnNP = document.getElementById('btnNovoPaciente');
+            if (btnNP) {
+                btnNP.addEventListener('click', function() {
+                    window.location.href = 'medico-dashboard.html';
+                });
+            }
         });
     </script>
 </body>

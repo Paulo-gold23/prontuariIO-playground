@@ -180,10 +180,16 @@
           <p class="text-xs text-amber-800 mt-0.5">Seus dados e assinatura digital são obrigatórios para habilitar a emissão de carimbos nos prontuários médicos.</p>
         </div>
       </div>
-      <button onclick="abrirModalPerfil()" class="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-200">
-        <i class="ph-bold ph-pencil-simple-line"></i>
-        Configurar Perfil
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="abrirModalCadastrarPaciente()" class="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-emerald-200 cursor-pointer">
+          <i class="ph-bold ph-user-plus text-sm"></i>
+          Novo Paciente
+        </button>
+        <button onclick="abrirModalPerfil()" class="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-200">
+          <i class="ph-bold ph-pencil-simple-line"></i>
+          Configurar Perfil
+        </button>
+      </div>
     </div>
 
     <!-- Header Stats -->
@@ -582,12 +588,173 @@
     </div>
   </div>
 
+  <!-- Modal Novo Paciente -->
+  <div id="modalCadastrarPaciente" class="hidden fixed inset-0 z-[1600] flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onclick="fecharModalCadastrarPaciente()"></div>
+    <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in duration-200">
+      
+      <!-- Header -->
+      <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <i class="ph-bold ph-user-plus text-xl"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-slate-900 dark:text-white">Cadastrar Novo Paciente</h3>
+            <p class="text-xs text-slate-400 font-medium">Preencha os dados para iniciar atendimento</p>
+          </div>
+        </div>
+        <button onclick="fecharModalCadastrarPaciente()" class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all">
+          <i class="ph-bold ph-x text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="formCadastrarPacienteDash" onsubmit="salvarNovoPacienteDashboard(event)" class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+        <div>
+          <label class="block text-xs font-black uppercase text-slate-500 mb-1">Nome Completo *</label>
+          <input type="text" id="cad-paciente-nome" required placeholder="Ex: Maria Silva"
+            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">CPF</label>
+            <input type="text" id="cad-paciente-cpf" placeholder="000.000.000-00"
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">Data de Nascimento</label>
+            <input type="date" id="cad-paciente-nascimento"
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">Sexo</label>
+            <select id="cad-paciente-sexo"
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+              <option value="">Selecione...</option>
+              <option value="F">Feminino</option>
+              <option value="M">Masculino</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-black uppercase text-slate-500 mb-1">Telefone</label>
+            <input type="text" id="cad-paciente-telefone" placeholder="(00) 00000-0000"
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-black uppercase text-slate-500 mb-1">Convênio</label>
+          <input type="text" id="cad-paciente-convenio" placeholder="Particular, Unimed, Bradesco..."
+            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <!-- Footer Actions inside form -->
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+          <button type="button" onclick="fecharModalCadastrarPaciente()" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl hover:bg-slate-200 transition-all">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-salvar-paciente-dash" class="flex-1 py-3 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2">
+            <i class="ph-bold ph-floppy-disk text-base"></i>
+            <span>Salvar Paciente</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <script>
     const WEBHOOK_LISTAR = "https://n8n.srv1181762.hstgr.cloud/webhook/listarPacientes";
     const WEBHOOK_HISTORICO = "https://n8n.srv1181762.hstgr.cloud/webhook/consultas_finalizadas"; // URL fix
+    
+    window.abrirModalCadastrarPaciente = function() {
+      const form = document.getElementById("formCadastrarPacienteDash");
+      if (form) form.reset();
+      const modal = document.getElementById("modalCadastrarPaciente");
+      if (modal) modal.classList.remove("hidden");
+    };
+
+    window.fecharModalCadastrarPaciente = function() {
+      const modal = document.getElementById("modalCadastrarPaciente");
+      if (modal) modal.classList.add("hidden");
+    };
+
+    window.salvarNovoPacienteDashboard = async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-salvar-paciente-dash");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin text-sm"></i> Salvando...';
+
+      try {
+        const nome = document.getElementById("cad-paciente-nome").value.trim();
+        const cpfRaw = document.getElementById("cad-paciente-cpf").value.trim();
+        const nasc = document.getElementById("cad-paciente-nascimento").value;
+        const sexo = document.getElementById("cad-paciente-sexo").value;
+        const telefone = document.getElementById("cad-paciente-telefone").value;
+        const convenio = document.getElementById("cad-paciente-convenio").value.trim();
+
+        if (!nome) {
+          if (window.showToast) window.showToast("Informe o nome do paciente.", "error");
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base"></i><span>Salvar Paciente</span>';
+          return;
+        }
+
+        const medicoObj = await garantirMedicoId();
+        const isDemo = medicoObj && medicoObj.tipo_clinica === 'demo';
+
+        let cpfLimpo = cpfRaw.replace(/\D/g, '');
+        if (cpfRaw && !isDemo) {
+          if (window.CPFValidator && !window.CPFValidator.validar(cpfRaw)) {
+            if (window.showToast) window.showToast("CPF inválido. Verifique os dígitos.", "error");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base"></i><span>Salvar Paciente</span>';
+            return;
+          }
+        }
+
+        const payload = {
+          nome: nome,
+          cpf: cpfLimpo || null,
+          data_nascimento: nasc || null,
+          sexo: sexo || null,
+          telefone: telefone || null,
+          convenio: convenio || 'Particular',
+          medico_id: medicoObj ? medicoObj.id : null
+        };
+
+        const { data, error } = await window.supabaseClient
+          .from('pacientes')
+          .insert(payload)
+          .select();
+
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error("Já existe um paciente cadastrado com este CPF nesta clínica.");
+          }
+          throw error;
+        }
+
+        if (window.showToast) window.showToast("Paciente cadastrado com sucesso!", "success");
+        fecharModalCadastrarPaciente();
+        await carregarPacientes();
+      } catch (err) {
+        console.error(err);
+        if (window.showToast) window.showToast("Erro ao cadastrar paciente: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base"></i><span>Salvar Paciente</span>';
+      }
+    };
     
     // Estado do modal ativo
     let _modalPacienteAtual = { id: null, nome: null, uploadIniciado: false };
@@ -1333,10 +1500,11 @@
 
     function verificarPerfilCompleto(medico) {
       if (!medico) return false;
+      if (medico.tipo_clinica === 'demo') return true;
       if (!medico.nome_completo || !medico.nome) return false;
-      if (medico.tipo_clinica !== 'lm' && medico.tipo_clinica !== 'demo' && !medico.assinatura_url) return false;
+      if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
       if (!medico.especialidade) return false;
-      if (medico.tipo_clinica !== 'cicatrize' && medico.tipo_clinica !== 'demo') {
+      if (medico.tipo_clinica !== 'cicatrize') {
         if (!medico.crm || !medico.uf_crm) return false;
       }
       return true;
