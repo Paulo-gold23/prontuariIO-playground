@@ -2670,8 +2670,7 @@
                         const query = window.supabaseClient
                             .from('pacientes')
                             .select('id')
-                            .eq('nome', data.nome)
-                            .eq('telefone', data.telefone)
+                            .ilike('nome', data.nome)
                             .order('created_at', { ascending: false })
                             .limit(1);
                         if (medicoIdFallback) query.eq('medico_id', medicoIdFallback);

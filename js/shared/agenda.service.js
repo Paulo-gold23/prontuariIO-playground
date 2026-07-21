@@ -102,10 +102,10 @@
             .update(dados)
             .eq('id', id)
             .select()
-            .single();
+            .maybeSingle();
 
         if (res.error) throw res.error;
-        return res.data;
+        return res.data || Object.assign({ id: id }, dados);
     }
 
     /**
