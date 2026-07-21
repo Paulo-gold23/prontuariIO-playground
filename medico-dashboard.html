@@ -1860,7 +1860,7 @@
               paciente_id: pacId,
               medico_id: medico.id,
               clinica_id: medico.clinica_id || null,
-              status: 'AGUARDANDO'
+              status: 'processando'
             })
             .select()
             .single();
