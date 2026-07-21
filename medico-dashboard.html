@@ -1334,9 +1334,9 @@
     function verificarPerfilCompleto(medico) {
       if (!medico) return false;
       if (!medico.nome_completo || !medico.nome) return false;
-      if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
+      if (medico.tipo_clinica !== 'lm' && medico.tipo_clinica !== 'demo' && !medico.assinatura_url) return false;
       if (!medico.especialidade) return false;
-      if (medico.tipo_clinica !== 'cicatrize') {
+      if (medico.tipo_clinica !== 'cicatrize' && medico.tipo_clinica !== 'demo') {
         if (!medico.crm || !medico.uf_crm) return false;
       }
       return true;
@@ -1393,6 +1393,7 @@
         const uf_crm = ufEl.value;
 
         const isCicatrize = medicoAtivo && medicoAtivo.tipo_clinica === 'cicatrize';
+        const isDemo = medicoAtivo && medicoAtivo.tipo_clinica === 'demo';
 
         let hasError = false;
 
@@ -1400,7 +1401,7 @@
         if (!nome) { highlightInputError(nomeEl, true); hasError = true; }
         if (!especialidade) { highlightInputError(especialidadeEl, true); hasError = true; }
 
-        if (!isCicatrize) {
+        if (!isCicatrize && !isDemo) {
           if (!crm) { highlightInputError(crmEl, true); hasError = true; }
           if (!uf_crm) { highlightInputError(ufEl, true); hasError = true; }
         }
@@ -1560,10 +1561,18 @@
       garantirMedicoId().then((medico) => {
         atualizarBannerPerfil();
         
-        // Oculta link "Recepção" para médicos L&M (eles não usam o módulo da Cicatrize)
-        if (medico && medico.tipo_clinica === 'lm') {
+        // Oculta link "Recepção" para médicos L&M e redireciona/ajusta para Clínica Demo
+        if (medico && (medico.tipo_clinica === 'lm' || medico.tipo_clinica === 'demo')) {
           const linkRecepcao = document.querySelector('a[href="recepcao.html"]');
-          if (linkRecepcao) linkRecepcao.style.display = 'none';
+          if (linkRecepcao) {
+            if (medico.tipo_clinica === 'demo') {
+              linkRecepcao.href = 'secretaria-dashboard.html';
+              const textSpan = linkRecepcao.querySelector('span');
+              if (textSpan) textSpan.textContent = 'Agenda / Secretaria';
+            } else {
+              linkRecepcao.style.display = 'none';
+            }
+          }
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -1589,7 +1598,7 @@
       if (!secao || !listContainer) return;
 
       const medico = await garantirMedicoId();
-      if (!medico || medico.tipo_clinica !== 'lm') {
+      if (!medico || (medico.tipo_clinica !== 'lm' && medico.tipo_clinica !== 'demo')) {
         secao.classList.add('hidden');
         return;
       }

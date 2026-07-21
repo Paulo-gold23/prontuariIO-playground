@@ -204,8 +204,15 @@
                 const isMedico    = medicoData !== null;
                 const isSecretaria = medicoData?.cargo === 'secretaria';
                 const isLM        = medicoData?.tipo_clinica === 'lm';
+                const isDemo      = medicoData?.tipo_clinica === 'demo';
 
-                if (isMedico && isSecretaria && isLM) {
+                if (isMedico && isDemo) {
+                    // Clínica Demo — Acesso médico e secretaria unificados
+                    localStorage.setItem('user_role', 'medico');
+                    localStorage.setItem('secretaria_ativa', 'true');
+                    window.location.href = 'medico-dashboard.html';
+
+                } else if (isMedico && isSecretaria && isLM) {
                     // Secretária exclusiva da Clínica L&M
                     localStorage.setItem('user_role', 'secretaria');
                     window.location.href = 'secretaria-dashboard.html';

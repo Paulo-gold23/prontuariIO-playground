@@ -81,9 +81,9 @@ async function garantirMedicoId() {
 function verificarPerfilCompleto(medico) {
     if (!medico) return false;
     if (!medico.nome_completo || !medico.nome) return false;
-    if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
+    if (medico.tipo_clinica !== 'lm' && medico.tipo_clinica !== 'demo' && !medico.assinatura_url) return false;
     if (!medico.especialidade) return false;
-    if (medico.tipo_clinica !== 'cicatrize') {
+    if (medico.tipo_clinica !== 'cicatrize' && medico.tipo_clinica !== 'demo') {
         if (!medico.crm || !medico.uf_crm) return false;
     }
     return true;
@@ -497,7 +497,7 @@ if (btnFecharModalAssin)   btnFecharModalAssin.onclick   = fecharModalAssinatura
 
 if (btnAprovar) {
     btnAprovar.onclick = async function () {
-        var isLM = medicoAtivo && medicoAtivo.tipo_clinica === 'lm';
+        var isLM = medicoAtivo && (medicoAtivo.tipo_clinica === 'lm' || medicoAtivo.tipo_clinica === 'demo');
         if (isLM) {
             await aprovarConsultaLM();
         } else {
@@ -976,7 +976,7 @@ async function carregarAnamneseReadOnly(pacienteId) {
 }
 
 function ativarModoLm() {
-    if (medicoAtivo && medicoAtivo.tipo_clinica === 'lm') {
+    if (medicoAtivo && (medicoAtivo.tipo_clinica === 'lm' || medicoAtivo.tipo_clinica === 'demo')) {
         var secaoAssin = document.getElementById('secaoAssinaturasStylus');
         if (secaoAssin) secaoAssin.classList.add('hidden');
 
