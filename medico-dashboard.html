@@ -1859,7 +1859,8 @@
             .insert({
               paciente_id: pacId,
               medico_id: medico.id,
-              status_atendimento: 'AGUARDANDO' // ou 'EM ATENDIMENTO'
+              clinica_id: medico.clinica_id || null,
+              status: 'AGUARDANDO'
             })
             .select()
             .single();

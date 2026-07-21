@@ -80,11 +80,10 @@ async function garantirMedicoId() {
 
 function verificarPerfilCompleto(medico) {
     if (!medico) return false;
-    if (medico.tipo_clinica === 'demo') return true;
     if (!medico.nome_completo || !medico.nome) return false;
-    if (medico.tipo_clinica !== 'lm' && !medico.assinatura_url) return false;
+    if (medico.tipo_clinica !== 'lm' && medico.tipo_clinica !== 'demo' && !medico.assinatura_url) return false;
     if (!medico.especialidade) return false;
-    if (medico.tipo_clinica !== 'cicatrize') {
+    if (medico.tipo_clinica !== 'cicatrize' && medico.tipo_clinica !== 'demo') {
         if (!medico.crm || !medico.uf_crm) return false;
     }
     return true;
