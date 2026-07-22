@@ -394,17 +394,31 @@ async function processarProntuario() {
             body: formData,
         });
 
-        var data = await response.json();
+        var rawText = await response.text();
+        var data = {};
+        if (rawText && rawText.trim()) {
+            try {
+                data = JSON.parse(rawText);
+            } catch (e) {
+                console.warn('[app] Webhook retornou texto não-JSON:', rawText);
+            }
+        }
 
-        if (data.success || data.consulta_id) {
-            consultaIdGlobal = data.consulta_id;
+        if (data.success || data.consulta_id || data.dados_extraidos || data.hda) {
+            consultaIdGlobal = data.consulta_id || data.id || consultaIdGlobal;
             _preencherFormulario(data);
             document.getElementById('gravacaoContainer').classList.add('hidden');
             document.getElementById('resultadoProntuario').classList.remove('hidden');
             window.showToast('Prontuário gerado!', 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (response.ok && (!rawText || !rawText.trim())) {
+            // Webhook n8n aceitou o áudio para processamento assíncrono ou retornou resposta vazia
+            window.showToast('Áudio enviado para processamento!', 'success');
+            document.getElementById('gravacaoContainer').classList.add('hidden');
+            document.getElementById('resultadoProntuario').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            throw new Error(data.message || 'Erro no processamento da IA');
+            throw new Error(data.message || data.error || (response.ok ? 'O servidor de IA não retornou um prontuário válido para este áudio. Tente gravar novamente com fala clara.' : `Erro HTTP ${response.status}`));
         }
     } catch (err) {
         window.showToast('Erro: ' + err.message, 'error');
