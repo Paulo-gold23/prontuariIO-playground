@@ -729,7 +729,8 @@
           sexo: sexo || null,
           telefone: telefone || null,
           convenio: convenio || 'Particular',
-          medico_id: medicoObj ? medicoObj.id : null
+          medico_id: medicoObj ? medicoObj.id : null,
+          clinica_id: medicoObj ? medicoObj.clinica_id : null
         };
 
         const { data, error } = await window.supabaseClient
