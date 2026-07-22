@@ -216,6 +216,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var pNome  = urlParams.get('paciente');
     var pId    = urlParams.get('id');
     var pConv  = urlParams.get('convenio') || 'Particular';
+    var pConsultaId = urlParams.get('consulta_id') || null;
+
+    // Se veio consulta_id da agenda, significa que a consulta já foi criada
+    // Armazena para usar no processamento
+    if (pConsultaId) {
+        consultaIdGlobal = pConsultaId;
+    }
 
     // Preenche cabeçalho do médico
     garantirMedicoId().then(function () {
@@ -400,9 +407,12 @@ async function processarProntuario() {
             try {
                 data = JSON.parse(rawText);
             } catch (e) {
-                console.warn('[app] Webhook retornou texto não-JSON:', rawText);
+                console.warn('[app] Webhook retornou texto não-JSON:', rawText.substring(0, 200));
+                throw new Error('Resposta inválida do servidor de IA. Tente novamente.');
             }
         }
+
+        console.log('[app] Webhook status:', response.status, 'data keys:', Object.keys(data));
 
         if (data.success || data.consulta_id || data.dados_extraidos || data.hda) {
             consultaIdGlobal = data.consulta_id || data.id || consultaIdGlobal;
@@ -411,14 +421,11 @@ async function processarProntuario() {
             document.getElementById('resultadoProntuario').classList.remove('hidden');
             window.showToast('Prontuário gerado!', 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (response.ok && (!rawText || !rawText.trim())) {
-            // Webhook n8n aceitou o áudio para processamento assíncrono ou retornou resposta vazia
-            window.showToast('Áudio enviado para processamento!', 'success');
-            document.getElementById('gravacaoContainer').classList.add('hidden');
-            document.getElementById('resultadoProntuario').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (!response.ok) {
+            throw new Error(data.message || data.error || 'Erro HTTP ' + response.status);
         } else {
-            throw new Error(data.message || data.error || (response.ok ? 'O servidor de IA não retornou um prontuário válido para este áudio. Tente gravar novamente com fala clara.' : `Erro HTTP ${response.status}`));
+            // response.ok (200) mas sem dados reconhecidos — provavelmente erro interno no n8n
+            throw new Error(data.message || 'O servidor processou a requisição mas não retornou dados do prontuário. Verifique o paciente e tente novamente.');
         }
     } catch (err) {
         window.showToast('Erro: ' + err.message, 'error');

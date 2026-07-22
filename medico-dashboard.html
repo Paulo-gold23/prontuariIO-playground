@@ -1880,7 +1880,7 @@
             .eq('id', agId);
 
           // 3. Redireciona para o atendimento
-          window.location.href = `atendimento.html?id=${consultaId}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
+          window.location.href = `atendimento.html?id=${pacId}&consulta_id=${consultaId}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
         } catch (e) {
           window.showToast('Erro ao iniciar atendimento: ' + e.message, 'error');
         }
@@ -1894,7 +1894,7 @@
             .single();
 
           if (data && data.consulta_id) {
-            window.location.href = `atendimento.html?id=${data.consulta_id}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
+            window.location.href = `atendimento.html?id=${pacId}&consulta_id=${data.consulta_id}&paciente=${encodeURIComponent(pacNome)}&convenio=${encodeURIComponent(convenio)}`;
           }
         } catch (e) {}
       }
