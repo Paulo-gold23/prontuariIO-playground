@@ -799,10 +799,38 @@ async function _concluirAtendimento(payload) {
         badge.innerHTML = '<i class="ph-fill ph-check-circle"></i> Finalizado';
     }
 
-    // Fotos / relatório fotográfico
-    var btnImgPDF = document.getElementById('btnRelatorioImagens');
     var cId = consultaIdGlobal || payload.consulta_id;
     var pId = pacienteAtual ? pacienteAtual.id : new URLSearchParams(window.location.search).get('id');
+
+    // Sincroniza e finaliza o agendamento no Supabase
+    if (window.supabaseClient) {
+        try {
+            if (cId) {
+                window.supabaseClient
+                    .from('agendamentos')
+                    .update({ status: 'finalizado' })
+                    .eq('consulta_id', cId)
+                    .then(function (res) {
+                        if (res.error) console.error('[app] Falha ao finalizar agendamento por consulta_id:', res.error);
+                    });
+            }
+            if (pId) {
+                window.supabaseClient
+                    .from('agendamentos')
+                    .update({ status: 'finalizado' })
+                    .eq('paciente_id', pId)
+                    .eq('status', 'em_atendimento')
+                    .then(function (res) {
+                        if (res.error) console.error('[app] Falha ao finalizar agendamento por paciente_id:', res.error);
+                    });
+            }
+        } catch (eAg) {
+            console.error('[app] Exceção ao atualizar status do agendamento:', eAg);
+        }
+    }
+
+    // Fotos / relatório fotográfico
+    var btnImgPDF = document.getElementById('btnRelatorioImagens');
 
     if (window.fotosConsulta && window.fotosConsulta.length > 0) {
         window._fotosParaRelatorio        = window.fotosConsulta.slice();
